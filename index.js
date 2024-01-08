@@ -37,10 +37,10 @@ run().catch(console.dir);
 
 
 
-app.get('/', (req,res) =>{
-    res.send("QuiEasy cart server is running ")
+app.get('/', (req, res) => {
+  res.send("QuiEasy cart server is running successfully ")
 })
 
-app.listen(port, ()=>{
-    console.log("Server is is running on port ",port);
+app.listen(port, () => {
+  console.log("Server is is running on port ", port);
 })
