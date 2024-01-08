@@ -36,6 +36,14 @@ async function run() {
     app.post('/addUser',async(req,res) =>{
       const data = req.body;
       console.log(data)
+      const user = req.body;
+      // console.log(user)
+      const query = {email: user.email}
+
+      const existingUser = await useProfileCollection.findOne(query)
+      if(existingUser){
+        return res.send({message: "user already exists"});
+      }
       const result = await useProfileCollection.insertOne(data)
       res.send(result)
   })
