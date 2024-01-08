@@ -28,6 +28,8 @@ async function run() {
 
     const productCollection = client.db('QuiEasyCartDB').collection("products")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
+    const requirementCollection = client.db('QuiEasyCartDB').collection('requirements');
+    const categoryCollection = client.db('QuiEasyCartDB').collection('categories')
     //user api
     app.post('/addUser',async(req,res) =>{
       const data = req.body;
@@ -57,6 +59,7 @@ async function run() {
       }}
     )
     res.send(result)
+    console.log(result)
   })
 
   //specific user get
@@ -66,7 +69,7 @@ async function run() {
     const result = await useProfileCollection.findOne(query)
     res.send(result)
   })
-    //Product api
+    //Product api------------------------------
     //all product get
     app.get('/allProducts', async(req,res) =>{
        const data = await productCollection.find().toArray()
@@ -85,6 +88,37 @@ async function run() {
     app.post('/addProduct', async(req,res) =>{
       const data = req.body;
       const result = await productCollection.insertOne(data)
+      res.send(result)
+      console.log(result)
+    })
+
+    //add requirement
+    app.post('/addRequirement', async(req, res) =>{
+      const data = req.body;
+      console.log(data)
+      const result =await requirementCollection.insertOne(data)
+      res.send(result)
+      console.log(result)
+    })
+
+    //getRequirement
+    app.get('/allRequirements',async(req,res) =>{
+      result = await requirementCollection.find().toArray();
+      res.send(result)
+    })
+
+     //add Category
+     app.post('/addCategory', async(req, res) =>{
+      const data = req.body;
+      console.log(data)
+      const result =await categoryCollection.insertOne(data)
+      res.send(result)
+      console.log(result)
+    })
+
+    //getCategory
+    app.get('/allCategories',async(req,res) =>{
+      result = await categoryCollection.find().toArray();
       res.send(result)
     })
 
