@@ -27,7 +27,9 @@ async function run() {
     await client.connect();
 
     const productCollection = client.db('QuiEasyCartDB').collection("products")
+    const categoryCollecton = client.db("QuiEasyCartDB").collections("categories")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
+    
     //user api
     app.post('/addUser',async(req,res) =>{
       const data = req.body;
@@ -86,6 +88,26 @@ async function run() {
       const data = req.body;
       const result = await productCollection.insertOne(data)
       res.send(result)
+    })
+
+    //Category api
+    app.get("/category", async(req,res) =>{
+      const data = await categoryCollecton.find().toArray();
+      res.send(data);
+    })
+
+    //specific Category product
+    app.get("/product/:category", async(req,res) =>{
+      const category = req.params.category;
+      const query = {category: category}
+      const data = await productCollection.find(query).toArray();
+      res.send(data)
+    })
+    
+    app.post("/addCategory", async(req,res) =>{
+      const data = req.body;
+      const result = await categoryCollecton.insertOne(data);
+      res.send(result); 
     })
 
     //cart api
