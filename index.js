@@ -29,60 +29,62 @@ async function run() {
     const productCollection = client.db('QuiEasyCartDB').collection("products")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
     //user api
-    app.post('/addUser',async(req,res) =>{
+    app.post('/addUser', async (req, res) => {
       const data = req.body;
       console.log(data)
       const result = await useProfileCollection.insertOne(data)
       res.send(result)
-  })
+    })
 
-  //update Profile 
-  app.patch('/updateProfile/:id',async(req, res) => {
-    const profileData = req.body;
-    const id = req.params.id;
-    const {firstName,lastName,phone,email,birthDate,image,gender,address,userId} = profileData;
-    console.log(firstName,lastName,phone,email,birthDate,image,gender,address,userId)
-    const result = await useProfileCollection.updateOne(
-      {_id: new ObjectId(id)},
-      {$set : {
-        userId: userId,
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        phone: phone,
-        gender: gender,
-        birthDate: birthDate,
-        image: image,
-        address: address
-      }}
-    )
-    res.send(result)
-  })
+    //update Profile 
+    app.patch('/updateProfile/:id', async (req, res) => {
+      const profileData = req.body;
+      const id = req.params.id;
+      const { firstName, lastName, phone, email, birthDate, image, gender, address, userId } = profileData;
+      console.log(firstName, lastName, phone, email, birthDate, image, gender, address, userId)
+      const result = await useProfileCollection.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            userId: userId,
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            phone: phone,
+            gender: gender,
+            birthDate: birthDate,
+            image: image,
+            address: address
+          }
+        }
+      )
+      res.send(result)
+    })
 
-  //specific user get
-  app.get('/user/:id',async(req,res)=>{
-    const id = req.params.id;
-    const query = {userId : id}
-    const result = await useProfileCollection.findOne(query)
-    res.send(result)
-  })
+    //specific user get
+    app.get('/user/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { userId: id }
+      const result = await useProfileCollection.findOne(query)
+      res.send(result)
+    })
     //Product api
     //all product get
-    app.get('/allProducts', async(req,res) =>{
-       const data = await productCollection.find().toArray()
-       res.send(data)
+    app.get('/allProducts', async (req, res) => {
+      const data = await productCollection.find().toArray()
+      res.send(data)
     })
-    
+
     //spccific product get
-    app.get("/product/:id", async(req,res) =>{
+    app.get("/product/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await productCollection.findOne(query);
       res.send(result);
     })
-   
+
     //product added in mongodb
-    app.post('/addProduct', async(req,res) =>{
+    app.post('/addProduct', async (req, res) => {
       const data = req.body;
       const result = await productCollection.insertOne(data)
       res.send(result)
@@ -96,7 +98,133 @@ async function run() {
 
     //reviews api
 
-    
+
+    // blog api 
+    // Assuming you have a 'blogCollection' similar to 'productCollection' connected to your MongoDB
+
+    // Get all blogs
+    app.get('/allBlogs', async (req, res) => {
+      try {
+        const data = await blogCollection.find().toArray();
+        res.send(data);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Get a specific blog
+    app.get('/blog/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await blogCollection.findOne(query);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Add a blog
+    app.post('/addBlog', async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await blogCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Update a blog
+    app.put('/editBlog/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const updateData = req.body;
+        const result = await blogCollection.updateOne(query, { $set: updateData });
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Delete a blog
+    app.delete('/deleteBlog/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await blogCollection.deleteOne(query);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+
+    //help api
+   
+
+    // Get all help content
+    app.get('/allHelp', async (req, res) => {
+      try {
+        const data = await helpCollection.find().toArray();
+        res.send(data);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Get a specific help content
+    app.get('/help/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await helpCollection.findOne(query);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Add help content
+    app.post('/addHelp', async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await helpCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Update help content
+    app.put('/editHelp/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const updateData = req.body;
+        const result = await helpCollection.updateOne(query, { $set: updateData });
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Delete help content
+    app.delete('/deleteHelp/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await helpCollection.deleteOne(query);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
