@@ -28,14 +28,27 @@ async function run() {
 
     const productCollection = client.db('QuiEasyCartDB').collection("products")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
+
+    const requirementCollection = client.db('QuiEasyCartDB').collection('requirements');
+    const categoryCollection = client.db('QuiEasyCartDB').collection('categories')
+    
     //user api
     app.post('/addUser', async (req, res) => {
       const data = req.body;
       console.log(data)
+      const user = req.body;
+      // console.log(user)
+      const query = {email: user.email}
+
+      const existingUser = await useProfileCollection.findOne(query)
+      if(existingUser){
+        return res.send({message: "user already exists"});
+      }
       const result = await useProfileCollection.insertOne(data)
       res.send(result)
     })
 
+<<<<<<< HEAD
     //update Profile 
     app.patch('/updateProfile/:id', async (req, res) => {
       const profileData = req.body;
@@ -69,6 +82,40 @@ async function run() {
       res.send(result)
     })
     //Product api
+=======
+  //update Profile 
+  app.patch('/updateProfile/:id',async(req, res) => {
+    const profileData = req.body;
+    const id = req.params.id;
+    const {firstName,lastName,phone,email,birthDate,image,gender,address,userId} = profileData;
+    console.log(firstName,lastName,phone,email,birthDate,image,gender,address,userId)
+    const result = await useProfileCollection.updateOne(
+      {_id: new ObjectId(id)},
+      {$set : {
+        userId: userId,
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        phone: phone,
+        gender: gender,
+        birthDate: birthDate,
+        image: image,
+        address: address
+      }}
+    )
+    res.send(result)
+    console.log(result)
+  })
+
+  //specific user get
+  app.get('/user/:id',async(req,res)=>{
+    const id = req.params.id;
+    const query = {userId : id}
+    const result = await useProfileCollection.findOne(query)
+    res.send(result)
+  })
+    //Product api------------------------------
+>>>>>>> e00dca1a5857dd31d13155ebcf935f39e685a543
     //all product get
     app.get('/allProducts', async (req, res) => {
       const data = await productCollection.find().toArray()
@@ -88,6 +135,57 @@ async function run() {
       const data = req.body;
       const result = await productCollection.insertOne(data)
       res.send(result)
+      console.log(result)
+    })
+
+    //add requirement
+    app.post('/addRequirement', async(req, res) =>{
+      const data = req.body;
+      console.log(data)
+      const result =await requirementCollection.insertOne(data)
+      res.send(result)
+      console.log(result)
+    })
+
+    //getRequirement
+    app.get('/allRequirements',async(req,res) =>{
+      result = await requirementCollection.find().toArray();
+      res.send(result)
+    })
+
+     //add Category
+     app.post('/addCategory', async(req, res) =>{
+      const data = req.body;
+      console.log(data)
+      const result =await categoryCollection.insertOne(data)
+      res.send(result)
+      console.log(result)
+    })
+
+    //getCategory
+    app.get('/allCategories',async(req,res) =>{
+      result = await categoryCollection.find().toArray();
+      res.send(result)
+    })
+
+    //Category api
+    app.get("/category", async(req,res) =>{
+      const data = await categoryCollecton.find().toArray();
+      res.send(data);
+    })
+
+    //specific Category product
+    app.get("/product/:category", async(req,res) =>{
+      const category = req.params.category;
+      const query = {category: category}
+      const data = await productCollection.find(query).toArray();
+      res.send(data)
+    })
+    
+    app.post("/addCategory", async(req,res) =>{
+      const data = req.body;
+      const result = await categoryCollecton.insertOne(data);
+      res.send(result); 
     })
 
     //cart api
