@@ -149,7 +149,7 @@ async function run() {
       const subCategory = await subCategoryCollection.findOne(query)
       console.log('subCategory',subCategory)
       const data = req.body;
-      if(subCategory &&  (subCategory.category && subCategory.subCategory) === (data.category && data.subCategory)){
+      if(subCategory &&  (subCategory.category === data.category) && (subCategory.subCategory === data.subCategory)){
         console.log('subCategory is exists')
       }else{
         
@@ -174,7 +174,7 @@ async function run() {
       const query = {brand : id}
       const brand = await brandCollection.findOne(query)
       const data = req.body;
-      if(brand && (brand.subCategory && brand.brand) === (data.subCategory && data.brand)){
+      if(brand && (brand.subCategory === data.subCategory) && (brand.brand === data.brand)){
         console.log('brand is exists')
       }else{
         console.log(data)
@@ -199,14 +199,15 @@ async function run() {
       const size = await sizeCollection.findOne(query)
       console.log('size',size)
       const data = req.body;
-      if(size && (size.brand && size.size) === (data.brand && data.size)){
+      console.log('data of siz',data)
+      if(size && (size.brand === data.brand) && (size.size === data.size)){
          console.log('size is exists')
       }else{
         
         console.log(data)
         const result =await sizeCollection.insertOne(data)
         res.send(result)
-        console.log(result)
+        console.log('result of size',result)
       }
      
       })
