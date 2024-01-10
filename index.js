@@ -28,15 +28,25 @@ async function run() {
 
     const productCollection = client.db('QuiEasyCartDB').collection("products")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
+
     const requirementCollection = client.db('QuiEasyCartDB').collection('requirements');
     const categoryCollection = client.db('QuiEasyCartDB').collection('categories')
     const subCategoryCollection = client.db('QuiEasyCartDB').collection('subCategories')
     const brandCollection = client.db('QuiEasyCartDB').collection('brands')
     const sizeCollection = client.db('QuiEasyCartDB').collection('sizes')
+    
     //user api
     app.post('/addUser',async(req,res) =>{
       const data = req.body;
       console.log(data)
+      const user = req.body;
+      // console.log(user)
+      const query = {email: user.email}
+
+      const existingUser = await useProfileCollection.findOne(query)
+      if(existingUser){
+        return res.send({message: "user already exists"});
+      }
       const result = await useProfileCollection.insertOne(data)
       res.send(result)
   })
@@ -206,6 +216,25 @@ async function run() {
         result = await sizeCollection.find().toArray();
         res.send(result)
       })
+    //Category api
+    app.get("/category", async(req,res) =>{
+      const data = await categoryCollecton.find().toArray();
+      res.send(data);
+    })
+
+    //specific Category product
+    app.get("/product/:category", async(req,res) =>{
+      const category = req.params.category;
+      const query = {category: category}
+      const data = await productCollection.find(query).toArray();
+      res.send(data)
+    })
+    
+    app.post("/addCategory", async(req,res) =>{
+      const data = req.body;
+      const result = await categoryCollecton.insertOne(data);
+      res.send(result); 
+    })
 
     //cart api
 
