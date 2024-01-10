@@ -80,6 +80,19 @@ async function run() {
     res.send(result)
   })
     //Product api------------------------------
+    app.get('/products', async(req,res) =>{
+      const page = parseInt(req.query.page) || 0;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = page*limit;
+      console.log(`page - ${page}, limit - ${limit}, skip - ${skip}`)
+      const result = await productCollection.find().skip(skip).limit(limit).toArray();
+      res.send(result);
+    })
+
+  app.get('/totalProducts', async(req,res) =>{
+    const result = await productCollection.estimatedDocumentCount();
+    res.send({totalProducts: result});
+   })
     //all product get
     app.get('/allProducts', async(req,res) =>{
        const data = await productCollection.find().toArray()
@@ -153,6 +166,27 @@ async function run() {
     })
 
     //cart api
+    app.get('/carts',async(req,res) =>{
+      const email = req.query.email
+        const query = {email: email};
+        const result = await cartCollection.find(query).toArray();
+        res.send(result)
+    })
+    
+    app.post('/carts', async(req,res) =>{
+      const item = req.body;
+      // console.log(item);
+      const result = await cartCollection.insertOne(item);
+      res.send(result);
+    })
+
+    app.delete('/carts/:id', async(req,res) =>{
+       const id = req.params.id;
+       const query = {_id: new ObjectId(id)}
+       const result = await cartCollection.deleteOne(query)
+       console.log(result)
+       res.send(result)
+    })
 
     //order api
 
