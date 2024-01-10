@@ -48,41 +48,6 @@ async function run() {
       res.send(result)
     })
 
-<<<<<<< HEAD
-    //update Profile 
-    app.patch('/updateProfile/:id', async (req, res) => {
-      const profileData = req.body;
-      const id = req.params.id;
-      const { firstName, lastName, phone, email, birthDate, image, gender, address, userId } = profileData;
-      console.log(firstName, lastName, phone, email, birthDate, image, gender, address, userId)
-      const result = await useProfileCollection.updateOne(
-        { _id: new ObjectId(id) },
-        {
-          $set: {
-            userId: userId,
-            firstName: firstName,
-            lastName: lastName,
-            email: email,
-            phone: phone,
-            gender: gender,
-            birthDate: birthDate,
-            image: image,
-            address: address
-          }
-        }
-      )
-      res.send(result)
-    })
-
-    //specific user get
-    app.get('/user/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { userId: id }
-      const result = await useProfileCollection.findOne(query)
-      res.send(result)
-    })
-    //Product api
-=======
   //update Profile 
   app.patch('/updateProfile/:id',async(req, res) => {
     const profileData = req.body;
@@ -115,7 +80,6 @@ async function run() {
     res.send(result)
   })
     //Product api------------------------------
->>>>>>> e00dca1a5857dd31d13155ebcf935f39e685a543
     //all product get
     app.get('/allProducts', async (req, res) => {
       const data = await productCollection.find().toArray()
