@@ -31,6 +31,9 @@ async function run() {
 
     const requirementCollection = client.db('QuiEasyCartDB').collection('requirements');
     const categoryCollection = client.db('QuiEasyCartDB').collection('categories')
+    const subCategoryCollection = client.db('QuiEasyCartDB').collection('subCategories')
+    const brandCollection = client.db('QuiEasyCartDB').collection('brands')
+    const sizeCollection = client.db('QuiEasyCartDB').collection('sizes')
     
     //user api
     app.post('/addUser', async (req, res) => {
@@ -53,7 +56,7 @@ async function run() {
     const profileData = req.body;
     const id = req.params.id;
     const {firstName,lastName,phone,email,birthDate,image,gender,address,userId} = profileData;
-    console.log(firstName,lastName,phone,email,birthDate,image,gender,address,userId)
+    console.log('from server',firstName,lastName,phone,email,birthDate,image,gender,address,userId)
     const result = await useProfileCollection.updateOne(
       {_id: new ObjectId(id)},
       {$set : {
@@ -118,12 +121,19 @@ async function run() {
     })
 
      //add Category
-     app.post('/addCategory', async(req, res) =>{
+     app.post('/addCategory/:id', async(req, res) =>{
+      const id = req.params.id;
+      const query = {category : id}
+      const category = await categoryCollection.findOne(query)
       const data = req.body;
-      console.log(data)
-      const result =await categoryCollection.insertOne(data)
-      res.send(result)
-      console.log(result)
+      if(category){
+        console.log('Category is exists')
+      }else{
+        const result =await categoryCollection.insertOne(data)
+        res.send(result)
+        console.log(result)
+      }
+      
     })
 
     //getCategory
@@ -132,6 +142,81 @@ async function run() {
       res.send(result)
     })
 
+      //add subCategory
+      app.post('/addSubCategory/:id', async(req, res) =>{
+      const id = req.params.id;
+      const query = {subCategory : id}
+      const subCategory = await subCategoryCollection.findOne(query)
+      console.log('subCategory',subCategory)
+      const data = req.body;
+      if(subCategory &&  (subCategory.category === data.category) && (subCategory.subCategory === data.subCategory)){
+        console.log('subCategory is exists')
+      }else{
+        
+        console.log(data)
+        const result =await subCategoryCollection.insertOne(data)
+        res.send(result)
+        console.log(result)
+      }
+      
+        
+      })
+  
+      //getSubCategory
+      app.get('/allSubCategories',async(req,res) =>{
+        result = await subCategoryCollection.find().toArray();
+        res.send(result)
+      })
+
+      //add brand
+      app.post('/addBrand/:id', async(req, res) =>{
+      const id = req.params.id;
+      const query = {brand : id}
+      const brand = await brandCollection.findOne(query)
+      const data = req.body;
+      if(brand && (brand.subCategory === data.subCategory) && (brand.brand === data.brand)){
+        console.log('brand is exists')
+      }else{
+        console.log(data)
+        const result =await brandCollection.insertOne(data)
+        res.send(result)
+        console.log(result)
+      }
+     
+       
+      })
+  
+      //getBrand
+      app.get('/allBrands',async(req,res) =>{
+        result = await brandCollection.find().toArray();
+        res.send(result)
+      })
+
+       //add size
+       app.post('/addSize/:id', async(req, res) =>{
+      const id = req.params.id;
+      const query = {size : id}
+      const size = await sizeCollection.findOne(query)
+      console.log('size',size)
+      const data = req.body;
+      console.log('data of siz',data)
+      if(size && (size.brand === data.brand) && (size.size === data.size)){
+         console.log('size is exists')
+      }else{
+        
+        console.log(data)
+        const result =await sizeCollection.insertOne(data)
+        res.send(result)
+        console.log('result of size',result)
+      }
+     
+      })
+  
+      //get Size
+      app.get('/allSizes',async(req,res) =>{
+        result = await sizeCollection.find().toArray();
+        res.send(result)
+      })
     //Category api
     app.get("/category", async(req,res) =>{
       const data = await categoryCollecton.find().toArray();
