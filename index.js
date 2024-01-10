@@ -139,7 +139,7 @@ async function run() {
       const query = {category : id}
       const category = await categoryCollection.findOne(query)
       const data = req.body;
-      if(category){
+      if(category && (category.category===data.category)){
         console.log('Category is exists')
       }else{
         const result =await categoryCollection.insertOne(data)
