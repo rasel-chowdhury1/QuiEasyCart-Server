@@ -34,68 +34,72 @@ async function run() {
     const subCategoryCollection = client.db('QuiEasyCartDB').collection('subCategories')
     const brandCollection = client.db('QuiEasyCartDB').collection('brands')
     const sizeCollection = client.db('QuiEasyCartDB').collection('sizes')
-    
+    const blogCollection = client.db('QuiEasyCartDB').collection('blogs')
+    const helpCollection = client.db('QuiEasyCartDB').collection('helps')
+
     //user api
     app.post('/addUser', async (req, res) => {
       const data = req.body;
       console.log(data)
       const user = req.body;
       // console.log(user)
-      const query = {email: user.email}
+      const query = { email: user.email }
 
       const existingUser = await useProfileCollection.findOne(query)
-      if(existingUser){
-        return res.send({message: "user already exists"});
+      if (existingUser) {
+        return res.send({ message: "user already exists" });
       }
       const result = await useProfileCollection.insertOne(data)
       res.send(result)
     })
 
-  //update Profile 
-  app.patch('/updateProfile/:id',async(req, res) => {
-    const profileData = req.body;
-    const id = req.params.id;
-    const {firstName,lastName,phone,email,birthDate,image,gender,address,userId} = profileData;
-    console.log('from server',firstName,lastName,phone,email,birthDate,image,gender,address,userId)
-    const result = await useProfileCollection.updateOne(
-      {_id: new ObjectId(id)},
-      {$set : {
-        userId: userId,
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        phone: phone,
-        gender: gender,
-        birthDate: birthDate,
-        image: image,
-        address: address
-      }}
-    )
-    res.send(result)
-    console.log(result)
-  })
+    //update Profile 
+    app.patch('/updateProfile/:id', async (req, res) => {
+      const profileData = req.body;
+      const id = req.params.id;
+      const { firstName, lastName, phone, email, birthDate, image, gender, address, userId } = profileData;
+      console.log('from server', firstName, lastName, phone, email, birthDate, image, gender, address, userId)
+      const result = await useProfileCollection.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            userId: userId,
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            phone: phone,
+            gender: gender,
+            birthDate: birthDate,
+            image: image,
+            address: address
+          }
+        }
+      )
+      res.send(result)
+      console.log(result)
+    })
 
-  //specific user get
-  app.get('/user/:id',async(req,res)=>{
-    const id = req.params.id;
-    const query = {userId : id}
-    const result = await useProfileCollection.findOne(query)
-    res.send(result)
-  })
+    //specific user get
+    app.get('/user/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { userId: id }
+      const result = await useProfileCollection.findOne(query)
+      res.send(result)
+    })
     //Product api------------------------------
-    app.get('/products', async(req,res) =>{
+    app.get('/products', async (req, res) => {
       const page = parseInt(req.query.page) || 0;
       const limit = parseInt(req.query.limit) || 10;
-      const skip = page*limit;
+      const skip = page * limit;
       console.log(`page - ${page}, limit - ${limit}, skip - ${skip}`)
       const result = await productCollection.find().skip(skip).limit(limit).toArray();
       res.send(result);
     })
 
-  app.get('/totalProducts', async(req,res) =>{
-    const result = await productCollection.estimatedDocumentCount();
-    res.send({totalProducts: result});
-   })
+    app.get('/totalProducts', async (req, res) => {
+      const result = await productCollection.estimatedDocumentCount();
+      res.send({ totalProducts: result });
+    })
     //all product get
     app.get('/allProducts', async (req, res) => {
       const data = await productCollection.find().toArray()
@@ -119,158 +123,158 @@ async function run() {
     })
 
     //add requirement
-    app.post('/addRequirement', async(req, res) =>{
+    app.post('/addRequirement', async (req, res) => {
       const data = req.body;
       console.log(data)
-      const result =await requirementCollection.insertOne(data)
+      const result = await requirementCollection.insertOne(data)
       res.send(result)
       console.log(result)
     })
 
     //getRequirement
-    app.get('/allRequirements',async(req,res) =>{
+    app.get('/allRequirements', async (req, res) => {
       result = await requirementCollection.find().toArray();
       res.send(result)
     })
 
-     //add Category
-     app.post('/addCategory/:id', async(req, res) =>{
+    //add Category
+    app.post('/addCategory/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {category : id}
+      const query = { category: id }
       const category = await categoryCollection.findOne(query)
       const data = req.body;
-      if(category && (category.category===data.category)){
+      if (category && (category.category === data.category)) {
         console.log('Category is exists')
-      }else{
-        const result =await categoryCollection.insertOne(data)
+      } else {
+        const result = await categoryCollection.insertOne(data)
         res.send(result)
         console.log(result)
       }
-      
+
     })
 
     //getCategory
-    app.get('/allCategories',async(req,res) =>{
+    app.get('/allCategories', async (req, res) => {
       result = await categoryCollection.find().toArray();
       res.send(result)
     })
 
-      //add subCategory
-      app.post('/addSubCategory/:id', async(req, res) =>{
+    //add subCategory
+    app.post('/addSubCategory/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {subCategory : id}
+      const query = { subCategory: id }
       const subCategory = await subCategoryCollection.findOne(query)
-      console.log('subCategory',subCategory)
+      console.log('subCategory', subCategory)
       const data = req.body;
-      if(subCategory &&  (subCategory.category === data.category) && (subCategory.subCategory === data.subCategory)){
+      if (subCategory && (subCategory.category === data.category) && (subCategory.subCategory === data.subCategory)) {
         console.log('subCategory is exists')
-      }else{
-        
+      } else {
+
         console.log(data)
-        const result =await subCategoryCollection.insertOne(data)
+        const result = await subCategoryCollection.insertOne(data)
         res.send(result)
         console.log(result)
       }
-      
-        
-      })
-  
-      //getSubCategory
-      app.get('/allSubCategories',async(req,res) =>{
-        result = await subCategoryCollection.find().toArray();
-        res.send(result)
-      })
 
-      //add brand
-      app.post('/addBrand/:id', async(req, res) =>{
+
+    })
+
+    //getSubCategory
+    app.get('/allSubCategories', async (req, res) => {
+      result = await subCategoryCollection.find().toArray();
+      res.send(result)
+    })
+
+    //add brand
+    app.post('/addBrand/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {brand : id}
+      const query = { brand: id }
       const brand = await brandCollection.findOne(query)
       const data = req.body;
-      if(brand && (brand.subCategory === data.subCategory) && (brand.brand === data.brand)){
+      if (brand && (brand.subCategory === data.subCategory) && (brand.brand === data.brand)) {
         console.log('brand is exists')
-      }else{
+      } else {
         console.log(data)
-        const result =await brandCollection.insertOne(data)
+        const result = await brandCollection.insertOne(data)
         res.send(result)
         console.log(result)
       }
-     
-       
-      })
-  
-      //getBrand
-      app.get('/allBrands',async(req,res) =>{
-        result = await brandCollection.find().toArray();
-        res.send(result)
-      })
 
-       //add size
-       app.post('/addSize/:id', async(req, res) =>{
+
+    })
+
+    //getBrand
+    app.get('/allBrands', async (req, res) => {
+      result = await brandCollection.find().toArray();
+      res.send(result)
+    })
+
+    //add size
+    app.post('/addSize/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {size : id}
+      const query = { size: id }
       const size = await sizeCollection.findOne(query)
-      console.log('size',size)
+      console.log('size', size)
       const data = req.body;
-      console.log('data of siz',data)
-      if(size && (size.brand === data.brand) && (size.size === data.size)){
-         console.log('size is exists')
-      }else{
-        
+      console.log('data of siz', data)
+      if (size && (size.brand === data.brand) && (size.size === data.size)) {
+        console.log('size is exists')
+      } else {
+
         console.log(data)
-        const result =await sizeCollection.insertOne(data)
+        const result = await sizeCollection.insertOne(data)
         res.send(result)
-        console.log('result of size',result)
+        console.log('result of size', result)
       }
-     
-      })
-  
-      //get Size
-      app.get('/allSizes',async(req,res) =>{
-        result = await sizeCollection.find().toArray();
-        res.send(result)
-      })
+
+    })
+
+    //get Size
+    app.get('/allSizes', async (req, res) => {
+      result = await sizeCollection.find().toArray();
+      res.send(result)
+    })
     //Category api
-    app.get("/category", async(req,res) =>{
+    app.get("/category", async (req, res) => {
       const data = await categoryCollecton.find().toArray();
       res.send(data);
     })
 
     //specific Category product
-    app.get("/product/:category", async(req,res) =>{
+    app.get("/product/:category", async (req, res) => {
       const category = req.params.category;
-      const query = {category: category}
+      const query = { category: category }
       const data = await productCollection.find(query).toArray();
       res.send(data)
     })
-    
-    app.post("/addCategory", async(req,res) =>{
+
+    app.post("/addCategory", async (req, res) => {
       const data = req.body;
       const result = await categoryCollecton.insertOne(data);
-      res.send(result); 
+      res.send(result);
     })
 
     //cart api
-    app.get('/carts',async(req,res) =>{
+    app.get('/carts', async (req, res) => {
       const email = req.query.email
-        const query = {email: email};
-        const result = await cartCollection.find(query).toArray();
-        res.send(result)
+      const query = { email: email };
+      const result = await cartCollection.find(query).toArray();
+      res.send(result)
     })
-    
-    app.post('/carts', async(req,res) =>{
+
+    app.post('/carts', async (req, res) => {
       const item = req.body;
       // console.log(item);
       const result = await cartCollection.insertOne(item);
       res.send(result);
     })
 
-    app.delete('/carts/:id', async(req,res) =>{
-       const id = req.params.id;
-       const query = {_id: new ObjectId(id)}
-       const result = await cartCollection.deleteOne(query)
-       console.log(result)
-       res.send(result)
+    app.delete('/carts/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await cartCollection.deleteOne(query)
+      console.log(result)
+      res.send(result)
     })
 
     //order api
@@ -282,6 +286,18 @@ async function run() {
 
     // blog api 
     // Assuming you have a 'blogCollection' similar to 'productCollection' connected to your MongoDB
+
+    // Add a blog
+    app.post('/addBlog', async (req, res) => {
+      try {
+        const data = req.body;
+        console.log(data)
+        const result = await blogCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
 
     // Get all blogs
     app.get('/allBlogs', async (req, res) => {
@@ -305,16 +321,6 @@ async function run() {
       }
     });
 
-    // Add a blog
-    app.post('/addBlog', async (req, res) => {
-      try {
-        const data = req.body;
-        const result = await blogCollection.insertOne(data);
-        res.send(result);
-      } catch (err) {
-        res.status(500).send({ message: err.message });
-      }
-    });
 
     // Update a blog
     app.put('/editBlog/:id', async (req, res) => {
@@ -343,7 +349,18 @@ async function run() {
 
 
     //help api
-   
+
+    // Add help content
+    app.post('/addHelp', async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await helpCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
 
     // Get all help content
     app.get('/allHelp', async (req, res) => {
@@ -367,16 +384,7 @@ async function run() {
       }
     });
 
-    // Add help content
-    app.post('/addHelp', async (req, res) => {
-      try {
-        const data = req.body;
-        const result = await helpCollection.insertOne(data);
-        res.send(result);
-      } catch (err) {
-        res.status(500).send({ message: err.message });
-      }
-    });
+
 
     // Update help content
     app.put('/editHelp/:id', async (req, res) => {
@@ -402,7 +410,6 @@ async function run() {
         res.status(500).send({ message: err.message });
       }
     });
-
 
 
 
