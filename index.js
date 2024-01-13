@@ -26,6 +26,7 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+
     const productCollection = client.db('QuiEasyCartDB').collection("products")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
 
@@ -88,13 +89,45 @@ async function run() {
     })
     //Product api------------------------------
     app.get('/products', async (req, res) => {
+      const category = {category: req.query.category};
+      
       const page = parseInt(req.query.page) || 0;
       const limit = parseInt(req.query.limit) || 10;
       const skip = page * limit;
       console.log(`page - ${page}, limit - ${limit}, skip - ${skip}`)
-      const result = await productCollection.find().skip(skip).limit(limit).toArray();
+      let result;
+      let total = 0;
+      if(category.category ===  ''){
+        const data = await productCollection.find().toArray()
+        total = data.length
+        result = await productCollection.find().skip(skip).limit(limit).toArray();
+      }
+      else{
+        const data = await productCollection.find(category).toArray()
+        total = data.length
+        if(data.length > limit){
+          result = await productCollection.find(category).skip(skip).limit(limit).toArray();
+        }
+        else{
+          result = data;
+        }
+         
+      }
+      
+      const obj = {len: total, result}
+      // console.log(obj)
+      res.send(obj);
+    })
+
+    app.get('/singleProduct/:id', async(req,res) =>{
+      const id = req.params.id;
+      const query = {_id : new ObjectId(id)};
+      console.log(query)
+      const result = await productCollection.find(query).toArray();
       res.send(result);
     })
+
+    
 
     app.get('/totalProducts', async (req, res) => {
       const result = await productCollection.estimatedDocumentCount();
@@ -410,7 +443,6 @@ async function run() {
         res.status(500).send({ message: err.message });
       }
     });
-
 
 
     // Send a ping to confirm a successful connection
