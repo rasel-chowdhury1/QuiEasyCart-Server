@@ -29,6 +29,7 @@ async function run() {
 
     const productCollection = client.db('QuiEasyCartDB').collection("products")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
+    const reviewCollection = client.db('QuiEasyCartDB').collection('userReview')
 
     const requirementCollection = client.db('QuiEasyCartDB').collection('requirements');
     const categoryCollection = client.db('QuiEasyCartDB').collection('categories')
@@ -86,6 +87,20 @@ async function run() {
       const query = { userId: id }
       const result = await useProfileCollection.findOne(query)
       res.send(result)
+    })
+
+    //Post user Review 
+    app.post('/addReview', async (req, res) => {
+      const data = req.body;
+      const result = await reviewCollection.insertOne(data)
+      res.send(result)
+      console.log(result)
+    })
+
+    //get user Review 
+    app.get('/getReview', async (req, res) => {
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
     })
     //Product api------------------------------
     app.get('/products', async (req, res) => {
@@ -148,6 +163,14 @@ async function run() {
       res.send(result);
     })
 
+    //Relative product get
+    app.get("/products/:subCategory", async (req, res) => {
+      const subCategory = req.params.subCategory;
+      const query = { subCategory: subCategory};
+      const result = await productCollection.find(query).toArray();
+      res.send(result);
+    })
+
     //product added in mongodb
     app.post('/addProduct', async (req, res) => {
       const data = req.body;
@@ -176,6 +199,7 @@ async function run() {
       const id = req.params.id;
       const query = { category: id }
       const category = await categoryCollection.findOne(query)
+      console.log(category)
       const data = req.body;
       if (category && (category.category === data.category)) {
         console.log('Category is exists')
