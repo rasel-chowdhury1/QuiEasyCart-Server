@@ -105,7 +105,7 @@ async function run() {
     //Product api------------------------------
     app.get('/products', async (req, res) => {
       const category = {category: req.query.category};
-      
+      console.log(category)
       const page = parseInt(req.query.page) || 0;
       const limit = parseInt(req.query.limit) || 10;
       const skip = page * limit;
@@ -114,6 +114,7 @@ async function run() {
       let total = 0;
       if(category.category ===  ''){
         const data = await productCollection.find().toArray()
+        console.log("Data is 102", data)
         total = data.length
         result = await productCollection.find().skip(skip).limit(limit).toArray();
       }
@@ -385,6 +386,7 @@ async function run() {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
         const updateData = req.body;
+        console.log(updateData)
         const result = await blogCollection.updateOne(query, { $set: updateData });
         res.send(result);
       } catch (err) {
