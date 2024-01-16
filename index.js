@@ -144,6 +144,17 @@ async function run() {
       res.send(obj);
     })
 
+    app.get('/adminproducts', async(req, res) => {
+      const page = parseInt(req.query.page) || 0;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = page * limit;
+      const result = await productCollection.find().toArray();
+      const total = result.length
+      const data = await productCollection.find().skip(skip).limit(limit).toArray();
+      const obj = {productlen : total, result : data}
+      res.send(obj)
+    })
+
     app.get('/api/search', async (req, res) => {
       const { query } = req.query;
 
