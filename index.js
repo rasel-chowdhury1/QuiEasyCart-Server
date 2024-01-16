@@ -29,6 +29,7 @@ async function run() {
 
     const productCollection = client.db('QuiEasyCartDB').collection("products")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
+    const reviewCollection = client.db('QuiEasyCartDB').collection('userReview')
 
     const requirementCollection = client.db('QuiEasyCartDB').collection('requirements');
     const categoryCollection = client.db('QuiEasyCartDB').collection('categories')
@@ -87,6 +88,20 @@ async function run() {
       const result = await useProfileCollection.findOne(query)
       res.send(result)
     })
+
+    //Post user Review 
+    app.post('/addReview', async (req, res) => {
+      const data = req.body;
+      const result = await reviewCollection.insertOne(data)
+      res.send(result)
+      console.log(result)
+    })
+
+    //get user Review 
+    app.get('/getReview', async (req, res) => {
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
+    })
     //Product api------------------------------
     app.get('/products', async (req, res) => {
       const category = {category: req.query.category};
@@ -144,6 +159,14 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await productCollection.findOne(query);
+      res.send(result);
+    })
+
+    //Relative product get
+    app.get("/products/:subCategory", async (req, res) => {
+      const subCategory = req.params.subCategory;
+      const query = { subCategory: subCategory};
+      const result = await productCollection.find(query).toArray();
       res.send(result);
     })
 
