@@ -104,8 +104,12 @@ async function run() {
     })
     //Product api------------------------------
     app.get('/products', async (req, res) => {
-      const category = {category: req.query.category};
-      console.log(category)
+      const category = {category: req.query.category} || '';
+      console.log('category value is ',category)
+      const minimumPrice = {price: {$gte: parseFloat(req.query.min)}}
+      const maximumPrice = {price : {$lte: parseFloat(req.query.max)}}
+      console.log("minimum and maximum price is - ",minimumPrice,maximumPrice)
+      
       const page = parseInt(req.query.page) || 0;
       const limit = parseInt(req.query.limit) || 10;
       const skip = page * limit;
@@ -113,16 +117,21 @@ async function run() {
       let result;
       let total = 0;
       if(category.category ===  ''){
-        const data = await productCollection.find().toArray()
-        console.log("Data is 102", data)
+        console.log('clicked now')
+        console.log('minimum price', minimumPrice)
+        console.log('maximum price - ',maximumPrice)
+        const data = await productCollection.find({$and:[minimumPrice,maximumPrice]}).toArray()
         total = data.length
-        result = await productCollection.find().skip(skip).limit(limit).toArray();
+        result = await productCollection.find({$and:[minimumPrice,maximumPrice]}).skip(skip).limit(limit).toArray();
       }
       else{
-        const data = await productCollection.find(category).toArray()
+        console.log('in else condition')
+        console.log('minimum price - ',minimumPrice)
+        console.log('maximum price - ',maximumPrice)
+        const data = await productCollection.find({$and: [category,{$and:[minimumPrice,maximumPrice]}]}).toArray()
         total = data.length
         if(data.length > limit){
-          result = await productCollection.find(category).skip(skip).limit(limit).toArray();
+          result = await productCollection.find({$and: [category,{$and:[minimumPrice,maximumPrice]}]}).skip(skip).limit(limit).toArray();
         }
         else{
           result = data;
@@ -134,6 +143,26 @@ async function run() {
       // console.log(obj)
       res.send(obj);
     })
+
+    app.get('/api/search', async (req, res) => {
+      const { query } = req.query;
+
+      const results = await productCollection.find({
+        $or: [
+          { name: { $regex: query, $options: 'i' } }, // case-insensitive search for name
+          { category: { $regex: query, $options: 'i' } }, // case-insensitive search for description
+          { subCategory: { $regex: query, $options: 'i' } }, // case-insensitive search for description
+          { detailssubCategory: { $regex: query, $options: 'i' } }, // case-insensitive search for description
+        ],
+      }).toArray();
+
+      // console.log(results)
+  
+      res.json(results);
+
+    })
+
+    
 
     app.get('/singleProduct/:id', async(req,res) =>{
       const id = req.params.id;
