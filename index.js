@@ -30,7 +30,7 @@ async function run() {
     const productCollection = client.db('QuiEasyCartDB').collection("products")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
     const reviewCollection = client.db('QuiEasyCartDB').collection('userReview')
-
+    const cartCollection = client.db('QuiEasyCartDB').collection('carts')
     const requirementCollection = client.db('QuiEasyCartDB').collection('requirements');
     const categoryCollection = client.db('QuiEasyCartDB').collection('categories')
     const subCategoryCollection = client.db('QuiEasyCartDB').collection('subCategories')
@@ -55,6 +55,7 @@ async function run() {
       res.send(result)
     })
 
+    
     //update Profile 
     app.patch('/updateProfile/:id', async (req, res) => {
       const profileData = req.body;
@@ -105,29 +106,29 @@ async function run() {
     //Product api------------------------------
     app.get('/products', async (req, res) => {
       const category = {category: req.query.category} || '';
-      console.log('category value is ',category)
+      // console.log('category value is ',category)
       const minimumPrice = {price: {$gte: parseFloat(req.query.min)}}
       const maximumPrice = {price : {$lte: parseFloat(req.query.max)}}
-      console.log("minimum and maximum price is - ",minimumPrice,maximumPrice)
+      // console.log("minimum and maximum price is - ",minimumPrice,maximumPrice)
       
       const page = parseInt(req.query.page) || 0;
       const limit = parseInt(req.query.limit) || 10;
       const skip = page * limit;
-      console.log(`page - ${page}, limit - ${limit}, skip - ${skip}`)
+      // console.log(`page - ${page}, limit - ${limit}, skip - ${skip}`)
       let result;
       let total = 0;
       if(category.category ===  ''){
-        console.log('clicked now')
-        console.log('minimum price', minimumPrice)
-        console.log('maximum price - ',maximumPrice)
+        // console.log('clicked now')
+        // console.log('minimum price', minimumPrice)
+        // console.log('maximum price - ',maximumPrice)
         const data = await productCollection.find({$and:[minimumPrice,maximumPrice]}).toArray()
         total = data.length
         result = await productCollection.find({$and:[minimumPrice,maximumPrice]}).skip(skip).limit(limit).toArray();
       }
       else{
-        console.log('in else condition')
-        console.log('minimum price - ',minimumPrice)
-        console.log('maximum price - ',maximumPrice)
+        // console.log('in else condition')
+        // console.log('minimum price - ',minimumPrice)
+        // console.log('maximum price - ',maximumPrice)
         const data = await productCollection.find({$and: [category,{$and:[minimumPrice,maximumPrice]}]}).toArray()
         total = data.length
         if(data.length > limit){
@@ -136,6 +137,7 @@ async function run() {
         else{
           result = data;
         }
+        
          
       }
       
@@ -363,15 +365,32 @@ async function run() {
     app.post('/carts', async (req, res) => {
       const item = req.body;
       // console.log(item);
-      const result = await cartCollection.insertOne(item);
-      res.send(result);
+      const productId = {_id: new ObjectId(item.menuItemId)}
+      const productData = await productCollection.find(productId).toArray()
+      // console.log('this is product data - ', productData[0])
+      if(!productData){
+        console.log('product data not found');
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      // console.log('productdata quantity is - ',productData[0].quantity)
+      // console.log('item data quantity is ', item.quantity)
+      if(productData[0].quantity >= item.quantity){
+        // console.log('product found')
+        const result = await cartCollection.insertOne(item);
+        // console.log("this result added in cartcollection after the value",result)
+        res.send(result);
+      }
+      else{
+        return res.status(404).json({ error: 'this product quantity not available' });
+      }
+      
     })
 
     app.delete('/carts/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
       const result = await cartCollection.deleteOne(query)
-      console.log(result)
+      // console.log(result)
       res.send(result)
     })
 
