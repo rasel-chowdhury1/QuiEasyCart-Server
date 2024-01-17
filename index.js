@@ -30,6 +30,7 @@ async function run() {
     const productCollection = client.db('QuiEasyCartDB').collection("products")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
     const reviewCollection = client.db('QuiEasyCartDB').collection('userReview')
+    const contactCollection = client.db('QuiEasyCartDB').collection('contacts')
     const cartCollection = client.db('QuiEasyCartDB').collection('carts')
     const requirementCollection = client.db('QuiEasyCartDB').collection('requirements');
     const categoryCollection = client.db('QuiEasyCartDB').collection('categories')
@@ -38,7 +39,8 @@ async function run() {
     const sizeCollection = client.db('QuiEasyCartDB').collection('sizes')
     const blogCollection = client.db('QuiEasyCartDB').collection('blogs')
     const helpCollection = client.db('QuiEasyCartDB').collection('helps')
-
+    const wishListCollection = client.db('QuiEasyCartDB').collection('wishlist')
+    const faqCollection = client.db('QuiEasyCartDB').collection('frequentlyQuesAnswers')
     //user api
     app.post('/addUser', async (req, res) => {
       const data = req.body;
@@ -523,6 +525,137 @@ async function run() {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
         const result = await helpCollection.deleteOne(query);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    //Post contact api
+    app.post('/addContact', async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await contactCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+
+    // Get all contact content
+    app.get('/allContact', async (req, res) => {
+      try {
+        const page = parseInt(req.query.page) || 0;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = page * limit;
+        const data = await contactCollection.find().toArray();
+        let result;
+        let total = data.length;
+        if(total > limit){
+           result = await contactCollection.find().skip(skip).limit(limit).toArray()
+        }else{
+          result = data;
+        }
+        res.send({len: total, result});
+      } catch (err){
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+     //Post wishlist api
+     app.post('/addReact', async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await wishListCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+     // Get all wishlist content withPagination
+     app.get('/reacts', async (req, res) => {
+      try {
+        const page = parseInt(req.query.page) || 0;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = page * limit;
+        const data = await wishListCollection.find().toArray();
+        let result;
+        let total = data.length;
+        if(total > limit){
+           result = await wishListCollection.find().skip(skip).limit(limit).toArray()
+        }else{
+          result = data;
+        }
+        res.send({len: total, result});
+      } catch (err){
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Get all wishlist content
+    app.get('/allReact', async (req, res) => {
+      try {
+        const data = await wishListCollection.find().toArray();
+        res.send(data);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Delete wishlist content
+    app.delete('/deleteReact/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await wishListCollection.deleteOne(query);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+     ///FAQ API Here------------------------------------------
+    //Post faq api
+    app.post('/addFaq', async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await faqCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+        // Update faq api
+        app.put('/editFaq/:id', async (req, res) => {
+          try {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const updateData = req.body;
+            const result = await faqCollection.updateOne(query, { $set: updateData });
+            res.send(result);
+          } catch (err) {
+            res.status(500).send({ message: err.message });
+          }
+        });
+
+     // Get all faq api
+     app.get('/allFaq', async (req, res) => {
+      try {
+        const data = await faqCollection.find().toArray();
+        res.send(data);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Delete faq api
+    app.delete('/deleteFaq/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await faqCollection.deleteOne(query);
         res.send(result);
       } catch (err) {
         res.status(500).send({ message: err.message });
