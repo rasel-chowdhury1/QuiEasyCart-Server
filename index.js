@@ -62,8 +62,30 @@ async function run() {
       res.send(result)
     })
 
-    
-    //update Profile 
+    //all user get
+    app.get('/allUsers', async (req, res) => {
+      const data = await useProfileCollection.find().toArray()
+      res.send(data)
+    })
+
+       //specific user get
+       app.get('/user/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = { userId: id }
+        const result = await useProfileCollection.findOne(query)
+        res.send(result)
+      })
+
+       //specific user get for admin
+       app.get('/users/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id) }
+        const result = await useProfileCollection.findOne(query)
+        res.send(result)
+      })
+
+
+        //update Profile 
     app.patch('/updateProfile/:id', async (req, res) => {
       const profileData = req.body;
       const id = req.params.id;
@@ -89,13 +111,15 @@ async function run() {
       console.log(result)
     })
 
-    //specific user get
-    app.get('/user/:id', async (req, res) => {
+// delete user 
+     app.delete('/user/:id', async (req, res) => {
       const id = req.params.id;
-      const query = { userId: id }
-      const result = await useProfileCollection.findOne(query)
+      const query = { _id: new ObjectId(id) }
+      const result = await useProfileCollection.deleteOne(query)
+      console.log(result)
       res.send(result)
     })
+
 
     //Post user Review 
     app.post('/addReview', async (req, res) => {
