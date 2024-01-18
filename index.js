@@ -1,5 +1,9 @@
 const express = require('express');
 const cors = require("cors");
+const SSLCommerzPayment = require('sslcommerz-lts')
+const store_id = 'quiea65a8c0c26bf3f'
+const store_passwd = 'quiea65a8c0c26bf3f@ssl'
+const is_live = false
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -41,6 +45,7 @@ async function run() {
     const helpCollection = client.db('QuiEasyCartDB').collection('helps')
     const wishListCollection = client.db('QuiEasyCartDB').collection('wishlist')
     const faqCollection = client.db('QuiEasyCartDB').collection('frequentlyQuesAnswers')
+    const orderCollection = client.db('QuiEasyCartDB').collection('orders')
     //user api
     app.post('/addUser', async (req, res) => {
       const data = req.body;
@@ -685,6 +690,88 @@ async function run() {
         res.status(500).send({ message: err.message });
       }
     });
+
+
+    //SSL commerze---------------------------
+    app.post('/order', (req, res) => {
+      const {firstName, lastName, address, currency, mobile, amount,products} = req.body;
+      const name = firstName + lastName;
+      const trainId = new ObjectId().toString();
+      
+      const data = {
+        total_amount: amount,
+        currency: currency,
+        tran_id: trainId, // use unique tran_id for each api call
+        success_url: `http://localhost:3000/payment/success/${trainId}`,
+        fail_url: `http://localhost:3000/payment/fail/${trainId}`,
+        cancel_url: 'http://localhost:3030/cancel',
+        ipn_url: 'http://localhost:3030/ipn',
+        shipping_method: 'Courier',
+        product_name: 'Computer.',
+        product_category: 'Electronic',
+        product_profile: 'general',
+        cus_name: name,
+        cus_email: 'customer@example.com',
+        cus_add1: address,
+        cus_add2: 'Dhaka',
+        cus_city: 'Dhaka',
+        cus_state: 'Dhaka',
+        cus_postcode: '1000',
+        cus_country: 'Bangladesh',
+        cus_phone: mobile,
+        cus_fax: '01711111111',
+        ship_name: 'Customer Name',
+        ship_add1: 'Dhaka',
+        ship_add2: 'Dhaka',
+        ship_city: 'Dhaka',
+        ship_state: 'Dhaka',
+        ship_postcode: 1000,
+        ship_country: 'Bangladesh',
+      };
+      const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
+      sslcz.init(data).then(apiResponse => {
+          // Redirect the user to payment gateway
+          let GatewayPageURL = apiResponse.GatewayPageURL
+          res.send({url: GatewayPageURL})
+          
+          const finalOrder = {
+            product: req.body,
+            paidStatus: false,
+            transactionId: trainId
+          }
+
+          const result = orderCollection.insertOne(finalOrder)
+      });
+
+      app.post('/payment/success/:trainId',async(req,res) => {
+         const result = await orderCollection.updateOne(
+          {transactionId: req.params.trainId},
+          {
+            $set: {
+               paidStatus: true,
+            }
+          }
+         );
+         if(result.modifiedCount > 0){
+          res.redirect(`http://localhost:5173/profile`)
+         }
+      })
+
+      app.post('/payment/fail/:trainId',async(req,res) => {
+        const result = await orderCollection.updateOne(
+          {transactionId: req.params.trainId},
+          {
+            $set: {
+               paidStatus: false,
+            }
+          }
+         );
+         if(result.acknowledged){
+          res.redirect(`http://localhost:5173/profile`)
+         }
+      })
+  })
+
 
 
     // Send a ping to confirm a successful connection
