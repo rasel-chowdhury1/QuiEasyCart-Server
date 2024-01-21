@@ -2,10 +2,36 @@ const express = require('express');
 const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 3000;
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 //middleware
 app.use(cors());
 app.use(express.json());
+
+const accesstoken = '5a3103abec02da90090e3656d1de4074ff191eff1ad3b7f15847e3ba41713b1da9c4eaf825241a358361edc5def66c1bc1105579d31a044b0bc074350a85ab80'
+
+const verifyJWT = (req, res, next) =>{
+  const authorization = req.headers.authorization;
+  // console.log('data from request of 14no line ',authorization)
+  if(!authorization){
+    return res.status(401).send({error: true, message: 'unauthorized access'})
+  }
+  //bearer token
+  const token = authorization.split(' ')[1];
+  // console.log('this token data form 20no line',token)
+  jwt.verify(token, accesstoken, (err,decoded) =>{
+    if(err){
+      
+      return res.status(401).send({error: true, message: 'unauthorized access'})
+    }
+    else{
+      req.decoded = decoded;
+      // console.log('verify jwt - ', decoded)
+      next();
+    }
+  })
+}
 
 
 
@@ -30,7 +56,7 @@ async function run() {
     const productCollection = client.db('QuiEasyCartDB').collection("products")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
     const reviewCollection = client.db('QuiEasyCartDB').collection('userReview')
-
+    const cartCollection = client.db('QuiEasyCartDB').collection('carts');
     const requirementCollection = client.db('QuiEasyCartDB').collection('requirements');
     const categoryCollection = client.db('QuiEasyCartDB').collection('categories')
     const subCategoryCollection = client.db('QuiEasyCartDB').collection('subCategories')
@@ -39,10 +65,41 @@ async function run() {
     const blogCollection = client.db('QuiEasyCartDB').collection('blogs')
     const helpCollection = client.db('QuiEasyCartDB').collection('helps')
 
+    
+    //jwt api
+    // console.log('jwt key ',process.env.ACCESS_TOKEN_SECRET)
+    app.post('/jwt', (req,res) =>{
+      const user = req.body;
+      const token = jwt.sign(user, accesstoken, {
+        expiresIn: '1hr'})
+      
+      res.send({token})
+    })
+    
+    //Warning: use verifyJWT before using verifyAdmin
+    const verifyAdmin = async(req, res, next) =>{
+      // const email = req.decoded.email;
+      // console.log('verify admin - ', email)
+      const query = {email: new RegExp(email,'i')}
+      // console.log('check query before find - ', query)
+      const user = await useProfileCollection.findOne(query)
+      // console.log('check user after find ' , user)
+      if(user?.roll !== 'admin'){
+        return res.status(403).send({error: true, message: 'forbidden message'})
+      }
+      // console.log(user)
+      next()
+    }
+
     //user api
+    app.get('/allUsers', async(req,res) => {
+      const result = await useProfileCollection.find().toArray()
+      // console.log(result)
+      res.send(result)
+    })
     app.post('/addUser', async (req, res) => {
       const data = req.body;
-      console.log(data)
+      // console.log(data)
       const user = req.body;
       // console.log(user)
       const query = { email: user.email }
@@ -89,12 +146,62 @@ async function run() {
       res.send(result)
     })
 
+    //admin
+    app.get('/users/admin/:email', verifyJWT,verifyAdmin, async(req,res) =>{
+      const email = req.params.email;
+      // console.log("this code print get method - ",email)
+
+      if(req.decoded.email !== email){
+        res.send({ admin: false})
+      }
+
+      const query = {email: new RegExp(email,'i')};
+      const user = await useProfileCollection.findOne(query);
+      const result = { admin: user?.roll === 'admin'};
+      // console.log(result)
+      res.send(result)
+    })
+
+    app.patch('/users/admin/:id', async(req,res) =>{
+      const id = req.params.id
+      // console.log(id)
+      const filter = {_id: new ObjectId(id)};
+      const updateDoc = {
+        $set: {
+          roll: 'admin'
+        },
+      };
+
+    
+
+      const result = await useProfileCollection.updateOne(filter,updateDoc);
+      // console.log(result)
+      res.send(result)
+    })
+
+    app.patch('/users/user/:id', async(req,res) =>{
+      const id = req.params.id
+      // console.log(id)
+      const filter = {_id: new ObjectId(id)};
+      const updateDoc = {
+        $set: {
+          roll: 'user'
+        },
+      };
+
+    
+
+      const result = await useProfileCollection.updateOne(filter,updateDoc);
+      // console.log(result)
+      res.send(result)
+    })
+
     //Post user Review 
     app.post('/addReview', async (req, res) => {
       const data = req.body;
       const result = await reviewCollection.insertOne(data)
       res.send(result)
-      console.log(result)
+      // console.log(result)
     })
 
     //get user Review 
@@ -105,29 +212,29 @@ async function run() {
     //Product api------------------------------
     app.get('/products', async (req, res) => {
       const category = {category: req.query.category} || '';
-      console.log('category value is ',category)
+      // console.log('category value is ',category)
       const minimumPrice = {price: {$gte: parseFloat(req.query.min)}}
       const maximumPrice = {price : {$lte: parseFloat(req.query.max)}}
-      console.log("minimum and maximum price is - ",minimumPrice,maximumPrice)
+      // console.log("minimum and maximum price is - ",minimumPrice,maximumPrice)
       
       const page = parseInt(req.query.page) || 0;
       const limit = parseInt(req.query.limit) || 10;
       const skip = page * limit;
-      console.log(`page - ${page}, limit - ${limit}, skip - ${skip}`)
+      // console.log(`page - ${page}, limit - ${limit}, skip - ${skip}`)
       let result;
       let total = 0;
       if(category.category ===  ''){
         console.log('clicked now')
-        console.log('minimum price', minimumPrice)
-        console.log('maximum price - ',maximumPrice)
+        // console.log('minimum price', minimumPrice)
+        // console.log('maximum price - ',maximumPrice)
         const data = await productCollection.find({$and:[minimumPrice,maximumPrice]}).toArray()
         total = data.length
         result = await productCollection.find({$and:[minimumPrice,maximumPrice]}).skip(skip).limit(limit).toArray();
       }
       else{
-        console.log('in else condition')
-        console.log('minimum price - ',minimumPrice)
-        console.log('maximum price - ',maximumPrice)
+        // console.log('in else condition')
+        // console.log('minimum price - ',minimumPrice)
+        // console.log('maximum price - ',maximumPrice)
         const data = await productCollection.find({$and: [category,{$and:[minimumPrice,maximumPrice]}]}).toArray()
         total = data.length
         if(data.length > limit){
@@ -178,7 +285,7 @@ async function run() {
     app.get('/singleProduct/:id', async(req,res) =>{
       const id = req.params.id;
       const query = {_id : new ObjectId(id)};
-      console.log(query)
+      // console.log(query)
       const result = await productCollection.find(query).toArray();
       res.send(result);
     })
@@ -222,10 +329,10 @@ async function run() {
     //add requirement
     app.post('/addRequirement', async (req, res) => {
       const data = req.body;
-      console.log(data)
+      // console.log(data)
       const result = await requirementCollection.insertOne(data)
       res.send(result)
-      console.log(result)
+      // console.log(result)
     })
 
     //getRequirement
@@ -239,7 +346,7 @@ async function run() {
       const id = req.params.id;
       const query = { category: id }
       const category = await categoryCollection.findOne(query)
-      console.log(category)
+      // console.log(category)
       const data = req.body;
       if (category && (category.category === data.category)) {
         console.log('Category is exists')
