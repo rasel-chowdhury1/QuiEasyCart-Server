@@ -677,8 +677,8 @@ async function run() {
         total_amount: amount,
         currency: currency,
         tran_id: trainId, // use unique tran_id for each api call
-        success_url: `http://localhost:3000/payment/success/${trainId}`,
-        fail_url: `http://localhost:3000/payment/fail/${trainId}`,
+        success_url: `https://quieasycarts.onrender.com/payment/success/${trainId}`,
+        fail_url: `https://quieasycarts.onrender.com/payment/fail/${trainId}`,
         cancel_url: 'http://localhost:3030/cancel',
         ipn_url: 'http://localhost:3030/ipn',
         shipping_method: 'Courier',
