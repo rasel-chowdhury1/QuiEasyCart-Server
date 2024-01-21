@@ -1,5 +1,9 @@
 const express = require('express');
 const cors = require("cors");
+const SSLCommerzPayment = require('sslcommerz-lts')
+const store_id = 'quiea65a8c0c26bf3f'
+const store_passwd = 'quiea65a8c0c26bf3f@ssl'
+const is_live = true
 const app = express();
 const port = process.env.PORT || 3000;
 const jwt = require('jsonwebtoken');
@@ -34,7 +38,6 @@ const verifyJWT = (req, res, next) =>{
 }
 
 
-
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = "mongodb+srv://QuiEasyCartDB:QuiEasyCartDB2024@cluster0.jz0ivtr.mongodb.net/?retryWrites=true&w=majority";
 
@@ -56,7 +59,8 @@ async function run() {
     const productCollection = client.db('QuiEasyCartDB').collection("products")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
     const reviewCollection = client.db('QuiEasyCartDB').collection('userReview')
-    const cartCollection = client.db('QuiEasyCartDB').collection('carts');
+    const contactCollection = client.db('QuiEasyCartDB').collection('contacts')
+    const cartCollection = client.db('QuiEasyCartDB').collection('carts')
     const requirementCollection = client.db('QuiEasyCartDB').collection('requirements');
     const categoryCollection = client.db('QuiEasyCartDB').collection('categories')
     const subCategoryCollection = client.db('QuiEasyCartDB').collection('subCategories')
@@ -91,6 +95,9 @@ async function run() {
       next()
     }
 
+    const wishListCollection = client.db('QuiEasyCartDB').collection('wishlist')
+    const faqCollection = client.db('QuiEasyCartDB').collection('frequentlyQuesAnswers')
+    const orderCollection = client.db('QuiEasyCartDB').collection('orders')
     //user api
     app.get('/allUsers', async(req,res) => {
       const result = await useProfileCollection.find().toArray()
@@ -112,7 +119,30 @@ async function run() {
       res.send(result)
     })
 
-    //update Profile 
+    //all user get
+    app.get('/allUsers', async (req, res) => {
+      const data = await useProfileCollection.find().toArray()
+      res.send(data)
+    })
+
+       //specific user get
+       app.get('/user/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = { userId: id }
+        const result = await useProfileCollection.findOne(query)
+        res.send(result)
+      })
+
+       //specific user get for admin
+       app.get('/users/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id) }
+        const result = await useProfileCollection.findOne(query)
+        res.send(result)
+      })
+
+
+        //update Profile 
     app.patch('/updateProfile/:id', async (req, res) => {
       const profileData = req.body;
       const id = req.params.id;
@@ -138,11 +168,12 @@ async function run() {
       console.log(result)
     })
 
-    //specific user get
-    app.get('/user/:id', async (req, res) => {
+// delete user 
+     app.delete('/user/:id', async (req, res) => {
       const id = req.params.id;
-      const query = { userId: id }
-      const result = await useProfileCollection.findOne(query)
+      const query = { _id: new ObjectId(id) }
+      const result = await useProfileCollection.deleteOne(query)
+      console.log(result)
       res.send(result)
     })
 
@@ -243,6 +274,7 @@ async function run() {
         else{
           result = data;
         }
+        
          
       }
       
@@ -470,15 +502,32 @@ async function run() {
     app.post('/carts', async (req, res) => {
       const item = req.body;
       // console.log(item);
-      const result = await cartCollection.insertOne(item);
-      res.send(result);
+      const productId = {_id: new ObjectId(item.menuItemId)}
+      const productData = await productCollection.find(productId).toArray()
+      // console.log('this is product data - ', productData[0])
+      if(!productData){
+        console.log('product data not found');
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      // console.log('productdata quantity is - ',productData[0].quantity)
+      // console.log('item data quantity is ', item.quantity)
+      if(productData[0].quantity >= item.quantity){
+        // console.log('product found')
+        const result = await cartCollection.insertOne(item);
+        // console.log("this result added in cartcollection after the value",result)
+        res.send(result);
+      }
+      else{
+        return res.status(404).json({ error: 'this product quantity not available' });
+      }
+      
     })
 
     app.delete('/carts/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
       const result = await cartCollection.deleteOne(query)
-      console.log(result)
+      // console.log(result)
       res.send(result)
     })
 
@@ -616,6 +665,245 @@ async function run() {
         res.status(500).send({ message: err.message });
       }
     });
+
+    //Post contact api
+    app.post('/addContact', async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await contactCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+
+    // Get all contact content
+    app.get('/allContact', async (req, res) => {
+      try {
+        const page = parseInt(req.query.page) || 0;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = page * limit;
+        const data = await contactCollection.find().toArray();
+        let result;
+        let total = data.length;
+        if(total > limit){
+           result = await contactCollection.find().skip(skip).limit(limit).toArray()
+        }else{
+          result = data;
+        }
+        res.send({len: total, result});
+      } catch (err){
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+     //Post wishlist api
+     app.post('/addReact', async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await wishListCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+     // Get all wishlist content withPagination
+     app.get('/reacts', async (req, res) => {
+      try {
+        const page = parseInt(req.query.page) || 0;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = page * limit;
+        const data = await wishListCollection.find().toArray();
+        let result;
+        let total = data.length;
+        if(total > limit){
+           result = await wishListCollection.find().skip(skip).limit(limit).toArray()
+        }else{
+          result = data;
+        }
+        res.send({len: total, result});
+      } catch (err){
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Get all wishlist content
+    app.get('/allReact', async (req, res) => {
+      try {
+        const data = await wishListCollection.find().toArray();
+        res.send(data);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Delete wishlist content
+    app.delete('/deleteReact/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await wishListCollection.deleteOne(query);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+     ///FAQ API Here------------------------------------------
+    //Post faq api
+    app.post('/addFaq', async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await faqCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+        // Update faq api
+        app.put('/editFaq/:id', async (req, res) => {
+          try {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const updateData = req.body;
+            const result = await faqCollection.updateOne(query, { $set: updateData });
+            res.send(result);
+          } catch (err) {
+            res.status(500).send({ message: err.message });
+          }
+        });
+
+     // Get all faq api
+     app.get('/allFaq', async (req, res) => {
+      try {
+        const data = await faqCollection.find().toArray();
+        res.send(data);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Delete faq api
+    app.delete('/deleteFaq/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await faqCollection.deleteOne(query);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+
+    //SSL commerze---------------------------
+    app.post('/order', (req, res) => {
+      const {firstName, lastName, address, currency, mobile, amount,products} = req.body;
+      const name = firstName + lastName;
+      const trainId = new ObjectId().toString();
+      
+      const data = {
+        total_amount: amount,
+        currency: currency,
+        tran_id: trainId, // use unique tran_id for each api call
+        success_url: `http://localhost:3000/payment/success/${trainId}`,
+        fail_url: `http://localhost:3000/payment/fail/${trainId}`,
+        cancel_url: 'http://localhost:3030/cancel',
+        ipn_url: 'http://localhost:3030/ipn',
+        shipping_method: 'Courier',
+        product_name: 'Computer.',
+        product_category: 'Electronic',
+        product_profile: 'general',
+        cus_name: name,
+        cus_email: 'customer@example.com',
+        cus_add1: address,
+        cus_add2: 'Dhaka',
+        cus_city: 'Dhaka',
+        cus_state: 'Dhaka',
+        cus_postcode: '1000',
+        cus_country: 'Bangladesh',
+        cus_phone: mobile,
+        cus_fax: '01711111111',
+        ship_name: 'Customer Name',
+        ship_add1: 'Dhaka',
+        ship_add2: 'Dhaka',
+        ship_city: 'Dhaka',
+        ship_state: 'Dhaka',
+        ship_postcode: 1000,
+        ship_country: 'Bangladesh',
+      };
+      const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
+      sslcz.init(data).then(apiResponse => {
+          // Redirect the user to payment gateway
+          let GatewayPageURL = apiResponse.GatewayPageURL
+          res.send({url: GatewayPageURL})
+          const today = new Date();
+          const date = today.toLocaleDateString("en-US")
+          const finalOrder = {
+            product: req.body,
+            paidStatus: false,
+            transactionId: trainId,
+            date: date
+          }
+
+          const result = orderCollection.insertOne(finalOrder)
+      });
+
+      app.post('/payment/success/:trainId',async(req,res) => {
+        const today = new Date();
+        const date = today.toLocaleDateString("en-US")
+         const result = await orderCollection.updateOne(
+          {transactionId: req.params.trainId},
+          {
+            $set: {
+               paidStatus: true,
+               date: date,
+            }
+          }
+         );
+         if(result.modifiedCount > 0){
+          res.redirect(`http://localhost:5173/profile`)
+         }
+      })
+
+      app.post('/payment/fail/:trainId',async(req,res) => {
+        const today = new Date();
+        const date = today.toLocaleDateString("en-US")
+        const result = await orderCollection.updateOne(
+          {transactionId: req.params.trainId},
+          {
+            $set: {
+               paidStatus: false,
+               date: date,
+            }
+          }
+         );
+         if(result.acknowledged){
+          res.redirect(`http://localhost:5173/profile`)
+         }
+      })
+  })
+
+//get all order api
+app.get('/allOrder',async (req,res) =>{
+   const result = await orderCollection.find().toArray()
+   res.send(result)
+})
+
+//delete order api
+app.delete('/deleteOrder/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await orderCollection.deleteOne(query);
+    res.send(result);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+});
+
 
 
     // Send a ping to confirm a successful connection
