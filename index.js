@@ -3,7 +3,7 @@ const cors = require("cors");
 const SSLCommerzPayment = require('sslcommerz-lts')
 const store_id = 'quiea65a8c0c26bf3f'
 const store_passwd = 'quiea65a8c0c26bf3f@ssl'
-const is_live = true
+const is_live = false;
 const app = express();
 const port = process.env.PORT || 3000;
 const jwt = require('jsonwebtoken');
@@ -808,8 +808,8 @@ async function run() {
         total_amount: amount,
         currency: currency,
         tran_id: trainId, // use unique tran_id for each api call
-        success_url: `http://localhost:3000/payment/success/${trainId}`,
-        fail_url: `http://localhost:3000/payment/fail/${trainId}`,
+        success_url: `https://quieasycarts.onrender.com/payment/success/${trainId}`,
+        fail_url: `https://quieasycarts.onrender.com/payment/fail/${trainId}`,
         cancel_url: 'http://localhost:3030/cancel',
         ipn_url: 'http://localhost:3030/ipn',
         shipping_method: 'Courier',
