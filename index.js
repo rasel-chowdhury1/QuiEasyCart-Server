@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require('express'); 
 const cors = require("cors");
 const SSLCommerzPayment = require('sslcommerz-lts')
 const store_id = 'quiea65a8c0c26bf3f'
@@ -6,10 +6,36 @@ const store_passwd = 'quiea65a8c0c26bf3f@ssl'
 const is_live = false;
 const app = express();
 const port = process.env.PORT || 3000;
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 //middleware
 app.use(cors());
 app.use(express.json());
+
+const accesstoken = '5a3103abec02da90090e3656d1de4074ff191eff1ad3b7f15847e3ba41713b1da9c4eaf825241a358361edc5def66c1bc1105579d31a044b0bc074350a85ab80'
+
+const verifyJWT = (req, res, next) =>{
+  const authorization = req.headers.authorization;
+  // console.log('data from request of 14no line ',authorization)
+  if(!authorization){
+    return res.status(401).send({error: true, message: 'unauthorized access'})
+  }
+  //bearer token
+  const token = authorization.split(' ')[1];
+  // console.log('this token data form 20no line',token)
+  jwt.verify(token, accesstoken, (err,decoded) =>{
+    if(err){
+      
+      return res.status(401).send({error: true, message: 'unauthorized access'})
+    }
+    else{
+      req.decoded = decoded;
+      // console.log('verify jwt - ', decoded)
+      next();
+    }
+  })
+}
 
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -42,13 +68,45 @@ async function run() {
     const sizeCollection = client.db('QuiEasyCartDB').collection('sizes')
     const blogCollection = client.db('QuiEasyCartDB').collection('blogs')
     const helpCollection = client.db('QuiEasyCartDB').collection('helps')
+
+    
+    //jwt api
+    // console.log('jwt key ',process.env.ACCESS_TOKEN_SECRET)
+    app.post('/jwt', (req,res) =>{
+      const user = req.body;
+      const token = jwt.sign(user, accesstoken, {
+        expiresIn: '1hr'})
+      
+      res.send({token})
+    })
+    
+    //Warning: use verifyJWT before using verifyAdmin
+    const verifyAdmin = async(req, res, next) =>{
+      // const email = req.decoded.email;
+      // console.log('verify admin - ', email)
+      const query = {email: new RegExp(email,'i')}
+      // console.log('check query before find - ', query)
+      const user = await useProfileCollection.findOne(query)
+      // console.log('check user after find ' , user)
+      if(user?.roll !== 'admin'){
+        return res.status(403).send({error: true, message: 'forbidden message'})
+      }
+      // console.log(user)
+      next()
+    }
+
     const wishListCollection = client.db('QuiEasyCartDB').collection('wishlist')
     const faqCollection = client.db('QuiEasyCartDB').collection('frequentlyQuesAnswers')
     const orderCollection = client.db('QuiEasyCartDB').collection('orders')
     //user api
+    app.get('/allUsers', async(req,res) => {
+      const result = await useProfileCollection.find().toArray()
+      // console.log(result)
+      res.send(result)
+    })
     app.post('/addUser', async (req, res) => {
       const data = req.body;
-      console.log(data)
+      // console.log(data)
       const user = req.body;
       // console.log(user)
       const query = { email: user.email }
@@ -61,8 +119,30 @@ async function run() {
       res.send(result)
     })
 
-    
-    //update Profile 
+    //all user get
+    app.get('/allUsers', async (req, res) => {
+      const data = await useProfileCollection.find().toArray()
+      res.send(data)
+    })
+
+       //specific user get
+       app.get('/user/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = { userId: id }
+        const result = await useProfileCollection.findOne(query)
+        res.send(result)
+      })
+
+       //specific user get for admin
+       app.get('/users/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id) }
+        const result = await useProfileCollection.findOne(query)
+        res.send(result)
+      })
+
+
+        //update Profile 
     app.patch('/updateProfile/:id', async (req, res) => {
       const profileData = req.body;
       const id = req.params.id;
@@ -88,11 +168,62 @@ async function run() {
       console.log(result)
     })
 
-    //specific user get
-    app.get('/user/:id', async (req, res) => {
+// delete user 
+     app.delete('/user/:id', async (req, res) => {
       const id = req.params.id;
-      const query = { userId: id }
-      const result = await useProfileCollection.findOne(query)
+      const query = { _id: new ObjectId(id) }
+      const result = await useProfileCollection.deleteOne(query)
+      console.log(result)
+      res.send(result)
+    })
+
+    //admin
+    app.get('/users/admin/:email', verifyJWT,verifyAdmin, async(req,res) =>{
+      const email = req.params.email;
+      // console.log("this code print get method - ",email)
+
+      if(req.decoded.email !== email){
+        res.send({ admin: false})
+      }
+
+      const query = {email: new RegExp(email,'i')};
+      const user = await useProfileCollection.findOne(query);
+      const result = { admin: user?.roll === 'admin'};
+      // console.log(result)
+      res.send(result)
+    })
+
+    app.patch('/users/admin/:id', async(req,res) =>{
+      const id = req.params.id
+      // console.log(id)
+      const filter = {_id: new ObjectId(id)};
+      const updateDoc = {
+        $set: {
+          roll: 'admin'
+        },
+      };
+
+    
+
+      const result = await useProfileCollection.updateOne(filter,updateDoc);
+      // console.log(result)
+      res.send(result)
+    })
+
+    app.patch('/users/user/:id', async(req,res) =>{
+      const id = req.params.id
+      // console.log(id)
+      const filter = {_id: new ObjectId(id)};
+      const updateDoc = {
+        $set: {
+          roll: 'user'
+        },
+      };
+
+    
+
+      const result = await useProfileCollection.updateOne(filter,updateDoc);
+      // console.log(result)
       res.send(result)
     })
 
@@ -101,7 +232,7 @@ async function run() {
       const data = req.body;
       const result = await reviewCollection.insertOne(data)
       res.send(result)
-      console.log(result)
+      // console.log(result)
     })
 
     //get user Review 
@@ -124,7 +255,7 @@ async function run() {
       let result;
       let total = 0;
       if(category.category ===  ''){
-        // console.log('clicked now')
+        console.log('clicked now')
         // console.log('minimum price', minimumPrice)
         // console.log('maximum price - ',maximumPrice)
         const data = await productCollection.find({$and:[minimumPrice,maximumPrice]}).toArray()
@@ -186,7 +317,7 @@ async function run() {
     app.get('/singleProduct/:id', async(req,res) =>{
       const id = req.params.id;
       const query = {_id : new ObjectId(id)};
-      console.log(query)
+      // console.log(query)
       const result = await productCollection.find(query).toArray();
       res.send(result);
     })
@@ -230,10 +361,10 @@ async function run() {
     //add requirement
     app.post('/addRequirement', async (req, res) => {
       const data = req.body;
-      console.log(data)
+      // console.log(data)
       const result = await requirementCollection.insertOne(data)
       res.send(result)
-      console.log(result)
+      // console.log(result)
     })
 
     //getRequirement
@@ -247,7 +378,7 @@ async function run() {
       const id = req.params.id;
       const query = { category: id }
       const category = await categoryCollection.findOne(query)
-      console.log(category)
+      // console.log(category)
       const data = req.body;
       if (category && (category.category === data.category)) {
         console.log('Category is exists')
