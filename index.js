@@ -3,7 +3,7 @@ const cors = require("cors");
 const SSLCommerzPayment = require('sslcommerz-lts')
 const store_id = 'quiea65a8c0c26bf3f'
 const store_passwd = 'quiea65a8c0c26bf3f@ssl'
-const is_live = true
+const is_live = false;
 const app = express();
 const port = process.env.PORT || 3000;
 
