@@ -3,14 +3,13 @@ const cors = require("cors");
 const SSLCommerzPayment = require('sslcommerz-lts')
 const store_id = 'quiea65a8c0c26bf3f'
 const store_passwd = 'quiea65a8c0c26bf3f@ssl'
-const is_live = false
+const is_live = true
 const app = express();
 const port = process.env.PORT || 3000;
 
 //middleware
 app.use(cors());
 app.use(express.json());
-
 
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -733,22 +732,27 @@ async function run() {
           // Redirect the user to payment gateway
           let GatewayPageURL = apiResponse.GatewayPageURL
           res.send({url: GatewayPageURL})
-          
+          const today = new Date();
+          const date = today.toLocaleDateString("en-US")
           const finalOrder = {
             product: req.body,
             paidStatus: false,
-            transactionId: trainId
+            transactionId: trainId,
+            date: date
           }
 
           const result = orderCollection.insertOne(finalOrder)
       });
 
       app.post('/payment/success/:trainId',async(req,res) => {
+        const today = new Date();
+        const date = today.toLocaleDateString("en-US")
          const result = await orderCollection.updateOne(
           {transactionId: req.params.trainId},
           {
             $set: {
                paidStatus: true,
+               date: date,
             }
           }
          );
@@ -758,11 +762,14 @@ async function run() {
       })
 
       app.post('/payment/fail/:trainId',async(req,res) => {
+        const today = new Date();
+        const date = today.toLocaleDateString("en-US")
         const result = await orderCollection.updateOne(
           {transactionId: req.params.trainId},
           {
             $set: {
                paidStatus: false,
+               date: date,
             }
           }
          );
@@ -771,6 +778,24 @@ async function run() {
          }
       })
   })
+
+//get all order api
+app.get('/allOrder',async (req,res) =>{
+   const result = await orderCollection.find().toArray()
+   res.send(result)
+})
+
+//delete order api
+app.delete('/deleteOrder/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await orderCollection.deleteOne(query);
+    res.send(result);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+});
 
 
 
