@@ -1,12 +1,41 @@
 const express = require('express'); 
 const cors = require("cors");
+const SSLCommerzPayment = require('sslcommerz-lts')
+const store_id = 'quiea65a8c0c26bf3f'
+const store_passwd = 'quiea65a8c0c26bf3f@ssl'
+const is_live = true
 const app = express();
 const port = process.env.PORT || 3000;
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 //middleware
 app.use(cors());
 app.use(express.json());
 
+const accesstoken = '5a3103abec02da90090e3656d1de4074ff191eff1ad3b7f15847e3ba41713b1da9c4eaf825241a358361edc5def66c1bc1105579d31a044b0bc074350a85ab80'
+
+const verifyJWT = (req, res, next) =>{
+  const authorization = req.headers.authorization;
+  // console.log('data from request of 14no line ',authorization)
+  if(!authorization){
+    return res.status(401).send({error: true, message: 'unauthorized access'})
+  }
+  //bearer token
+  const token = authorization.split(' ')[1];
+  // console.log('this token data form 20no line',token)
+  jwt.verify(token, accesstoken, (err,decoded) =>{
+    if(err){
+      
+      return res.status(401).send({error: true, message: 'unauthorized access'})
+    }
+    else{
+      req.decoded = decoded;
+      // console.log('verify jwt - ', decoded)
+      next();
+    }
+  })
+}
 
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -30,6 +59,7 @@ async function run() {
     const productCollection = client.db('QuiEasyCartDB').collection("products")
     const useProfileCollection = client.db('QuiEasyCartDB').collection('userProfile')
     const reviewCollection = client.db('QuiEasyCartDB').collection('userReview')
+    const contactCollection = client.db('QuiEasyCartDB').collection('contacts')
     const cartCollection = client.db('QuiEasyCartDB').collection('carts')
     const requirementCollection = client.db('QuiEasyCartDB').collection('requirements');
     const categoryCollection = client.db('QuiEasyCartDB').collection('categories')
@@ -39,10 +69,44 @@ async function run() {
     const blogCollection = client.db('QuiEasyCartDB').collection('blogs')
     const helpCollection = client.db('QuiEasyCartDB').collection('helps')
 
+    
+    //jwt api
+    // console.log('jwt key ',process.env.ACCESS_TOKEN_SECRET)
+    app.post('/jwt', (req,res) =>{
+      const user = req.body;
+      const token = jwt.sign(user, accesstoken, {
+        expiresIn: '1hr'})
+      
+      res.send({token})
+    })
+    
+    //Warning: use verifyJWT before using verifyAdmin
+    const verifyAdmin = async(req, res, next) =>{
+      const email = req.decoded.email;
+      // console.log('verify admin - ', email)
+      const query = {email: new RegExp(email,'i')}
+      // console.log('check query before find - ', query)
+      const user = await useProfileCollection.findOne(query)
+      // console.log('check user after find ' , user)
+      if(user?.roll !== 'admin'){
+        return res.status(403).send({error: true, message: 'forbidden message'})
+      }
+      // console.log(user)
+      next()
+    }
+
+    const wishListCollection = client.db('QuiEasyCartDB').collection('wishlist')
+    const faqCollection = client.db('QuiEasyCartDB').collection('frequentlyQuesAnswers')
+    const orderCollection = client.db('QuiEasyCartDB').collection('orders')
     //user api
+    app.get('/allUsers', async(req,res) => {
+      const result = await useProfileCollection.find().toArray()
+      // console.log(result)
+      res.send(result)
+    })
     app.post('/addUser', async (req, res) => {
       const data = req.body;
-      console.log(data)
+      // console.log(data)
       const user = req.body;
       // console.log(user)
       const query = { email: user.email }
@@ -55,8 +119,30 @@ async function run() {
       res.send(result)
     })
 
-    
-    //update Profile 
+    //all user get
+    app.get('/allUsers', async (req, res) => {
+      const data = await useProfileCollection.find().toArray()
+      res.send(data)
+    })
+
+       //specific user get
+       app.get('/user/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = { userId: id }
+        const result = await useProfileCollection.findOne(query)
+        res.send(result)
+      })
+
+       //specific user get for admin
+       app.get('/users/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id) }
+        const result = await useProfileCollection.findOne(query)
+        res.send(result)
+      })
+
+
+        //update Profile 
     app.patch('/updateProfile/:id', async (req, res) => {
       const profileData = req.body;
       const id = req.params.id;
@@ -82,11 +168,62 @@ async function run() {
       console.log(result)
     })
 
-    //specific user get
-    app.get('/user/:id', async (req, res) => {
+// delete user 
+     app.delete('/user/:id', async (req, res) => {
       const id = req.params.id;
-      const query = { userId: id }
-      const result = await useProfileCollection.findOne(query)
+      const query = { _id: new ObjectId(id) }
+      const result = await useProfileCollection.deleteOne(query)
+      console.log(result)
+      res.send(result)
+    })
+
+    //admin
+    app.get('/users/admin/:email', verifyJWT,verifyAdmin, async(req,res) =>{
+      const email = req.params.email;
+      // console.log("this code print get method - ",email)
+
+      if(req.decoded.email !== email){
+        res.send({ admin: false})
+      }
+
+      const query = {email: new RegExp(email,'i')};
+      const user = await useProfileCollection.findOne(query);
+      const result = { admin: user?.roll === 'admin'};
+      // console.log(result)
+      res.send(result)
+    })
+
+    app.patch('/users/admin/:id', async(req,res) =>{
+      const id = req.params.id
+      // console.log(id)
+      const filter = {_id: new ObjectId(id)};
+      const updateDoc = {
+        $set: {
+          roll: 'admin'
+        },
+      };
+
+    
+
+      const result = await useProfileCollection.updateOne(filter,updateDoc);
+      // console.log(result)
+      res.send(result)
+    })
+
+    app.patch('/users/user/:id', async(req,res) =>{
+      const id = req.params.id
+      // console.log(id)
+      const filter = {_id: new ObjectId(id)};
+      const updateDoc = {
+        $set: {
+          roll: 'user'
+        },
+      };
+
+    
+
+      const result = await useProfileCollection.updateOne(filter,updateDoc);
+      // console.log(result)
       res.send(result)
     })
 
@@ -95,7 +232,7 @@ async function run() {
       const data = req.body;
       const result = await reviewCollection.insertOne(data)
       res.send(result)
-      console.log(result)
+      // console.log(result)
     })
 
     //get user Review 
@@ -118,7 +255,7 @@ async function run() {
       let result;
       let total = 0;
       if(category.category ===  ''){
-        // console.log('clicked now')
+        console.log('clicked now')
         // console.log('minimum price', minimumPrice)
         // console.log('maximum price - ',maximumPrice)
         const data = await productCollection.find({$and:[minimumPrice,maximumPrice]}).toArray()
@@ -180,7 +317,7 @@ async function run() {
     app.get('/singleProduct/:id', async(req,res) =>{
       const id = req.params.id;
       const query = {_id : new ObjectId(id)};
-      console.log(query)
+      // console.log(query)
       const result = await productCollection.find(query).toArray();
       res.send(result);
     })
@@ -224,10 +361,10 @@ async function run() {
     //add requirement
     app.post('/addRequirement', async (req, res) => {
       const data = req.body;
-      console.log(data)
+      // console.log(data)
       const result = await requirementCollection.insertOne(data)
       res.send(result)
-      console.log(result)
+      // console.log(result)
     })
 
     //getRequirement
@@ -241,7 +378,7 @@ async function run() {
       const id = req.params.id;
       const query = { category: id }
       const category = await categoryCollection.findOne(query)
-      console.log(category)
+      // console.log(category)
       const data = req.body;
       if (category && (category.category === data.category)) {
         console.log('Category is exists')
@@ -359,6 +496,7 @@ async function run() {
       const email = req.query.email
       const query = { email: email };
       const result = await cartCollection.find(query).toArray();
+      console.log(result)
       res.send(result)
     })
 
@@ -528,6 +666,267 @@ async function run() {
         res.status(500).send({ message: err.message });
       }
     });
+
+    //Post contact api
+    app.post('/addContact', async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await contactCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+
+    // Get all contact content
+    app.get('/allContact', async (req, res) => {
+      try {
+        const page = parseInt(req.query.page) || 0;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = page * limit;
+        const data = await contactCollection.find().toArray();
+        let result;
+        let total = data.length;
+        if(total > limit){
+           result = await contactCollection.find().skip(skip).limit(limit).toArray()
+        }else{
+          result = data;
+        }
+        res.send({len: total, result});
+      } catch (err){
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+     //Post wishlist api
+     app.post('/addReact', async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await wishListCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+     // Get all wishlist content withPagination
+     app.get('/reacts', async (req, res) => {
+      try {
+        const page = parseInt(req.query.page) || 0;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = page * limit;
+        const data = await wishListCollection.find().toArray();
+        let result;
+        let total = data.length;
+        if(total > limit){
+           result = await wishListCollection.find().skip(skip).limit(limit).toArray()
+        }else{
+          result = data;
+        }
+        res.send({len: total, result});
+      } catch (err){
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Get all wishlist content
+    app.get('/allReact', async (req, res) => {
+      try {
+        const data = await wishListCollection.find().toArray();
+        res.send(data);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Delete wishlist content
+    app.delete('/deleteReact/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await wishListCollection.deleteOne(query);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+     ///FAQ API Here------------------------------------------
+    //Post faq api
+    app.post('/addFaq', async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await faqCollection.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+        // Update faq api
+        app.put('/editFaq/:id', async (req, res) => {
+          try {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const updateData = req.body;
+            const result = await faqCollection.updateOne(query, { $set: updateData });
+            res.send(result);
+          } catch (err) {
+            res.status(500).send({ message: err.message });
+          }
+        });
+
+     // Get all faq api
+     app.get('/allFaq', async (req, res) => {
+      try {
+        const data = await faqCollection.find().toArray();
+        res.send(data);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    // Delete faq api
+    app.delete('/deleteFaq/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await faqCollection.deleteOne(query);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    //SSL commerze---------------------------
+    app.post('/order', async(req, res) => {
+      const {user_email,firstName, lastName, address, currency, mobile, amount,products} = req.body;
+      
+
+      const name = firstName + lastName;
+      const trainId = new ObjectId().toString();
+      
+      const data = {
+        total_amount: amount,
+        currency: currency,
+        tran_id: trainId, // use unique tran_id for each api call
+        success_url: `http://localhost:3000/payment/success/${trainId}`,
+        fail_url: `http://localhost:3000/payment/fail/${trainId}`,
+        cancel_url: 'http://localhost:3030/cancel',
+        ipn_url: 'http://localhost:3030/ipn',
+        shipping_method: 'Courier',
+        product_name: 'Computer.',
+        product_category: 'Electronic',
+        product_profile: 'general',
+        cus_name: name,
+        cus_email: 'customer@example.com',
+        cus_add1: address,
+        cus_add2: 'Dhaka',
+        cus_city: 'Dhaka',
+        cus_state: 'Dhaka',
+        cus_postcode: '1000',
+        cus_country: 'Bangladesh',
+        cus_phone: mobile,
+        cus_fax: '01711111111',
+        ship_name: 'Customer Name',
+        ship_add1: 'Dhaka',
+        ship_add2: 'Dhaka',
+        ship_city: 'Dhaka',
+        ship_state: 'Dhaka',
+        ship_postcode: 1000,
+        ship_country: 'Bangladesh',
+      };
+      const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
+      sslcz.init(data).then(apiResponse => {
+          // Redirect the user to payment gateway
+          let GatewayPageURL = apiResponse.GatewayPageURL
+          res.send({url: GatewayPageURL})
+          const today = new Date();
+          const date = today.toLocaleDateString("en-US")
+          const finalOrder = {
+            product: req.body,
+            paidStatus: false,
+            transactionId: trainId,
+            date: date
+          }
+
+          const result = orderCollection.insertOne(finalOrder)
+      });
+
+      app.post('/payment/success/:trainId',async(req,res) => {
+        const today = new Date();
+        const date = today.toLocaleDateString("en-US")
+         const result = await orderCollection.updateOne(
+          {transactionId: req.params.trainId},
+          {
+            $set: {
+               paidStatus: true,
+               date: date,
+            }
+          }
+         );
+         if(result.modifiedCount > 0){
+          const query = { email: user_email };
+          const userCarts = await cartCollection.find(query).toArray();
+          // console.log(userCarts)
+          const queryies = {_id: { $in: userCarts.map(id => new ObjectId(id._id))}}
+          // console.log('queryies data ',queryies)
+          const deleteResult = await cartCollection.deleteMany(queryies)
+          // Step 2: Process each cart
+          
+          for (const cartItem of userCarts) {
+            const productId = cartItem.menuItemId; // Assuming menuItemId is the product ID
+      
+            const updatedProduct = await productCollection.findOneAndUpdate(
+              { _id: new ObjectId(productId) },
+              { $inc: { quantity: -cartItem.quantity } },
+              { returnDocument: 'after' }
+            );
+      
+            // Optionally, you can check the updatedProduct to see the updated document in the product collection
+            // console.log(`Updated product with ID ${productId}:`, updatedProduct.value);
+          }
+          
+          res.redirect(`http://localhost:5173/profile`)
+         }
+      })
+
+      app.post('/payment/fail/:trainId',async(req,res) => {
+        const today = new Date();
+        const date = today.toLocaleDateString("en-US")
+        const result = await orderCollection.updateOne(
+          {transactionId: req.params.trainId},
+          {
+            $set: {
+               paidStatus: false,
+               date: date,
+            }
+          }
+         );
+         if(result.acknowledged){
+          res.redirect(`http://localhost:5173/profile`)
+         }
+      })
+  })
+
+//get all order api
+app.get('/allOrder',async (req,res) =>{
+   const result = await orderCollection.find().toArray()
+   res.send(result)
+})
+
+//delete order api
+app.delete('/deleteOrder/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await orderCollection.deleteOne(query);
+    res.send(result);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+});
+
 
 
     // Send a ping to confirm a successful connection
