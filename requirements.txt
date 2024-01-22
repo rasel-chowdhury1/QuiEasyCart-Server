@@ -1,1 +1,2 @@
 sslcommerz-lts
+jsonwebtoken
