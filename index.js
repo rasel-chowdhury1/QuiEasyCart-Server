@@ -82,7 +82,7 @@ async function run() {
     
     //Warning: use verifyJWT before using verifyAdmin
     const verifyAdmin = async(req, res, next) =>{
-      // const email = req.decoded.email;
+      const email = req.decoded.email;
       // console.log('verify admin - ', email)
       const query = {email: new RegExp(email,'i')}
       // console.log('check query before find - ', query)
@@ -496,6 +496,7 @@ async function run() {
       const email = req.query.email
       const query = { email: email };
       const result = await cartCollection.find(query).toArray();
+      console.log(result)
       res.send(result)
     })
 
@@ -797,10 +798,11 @@ async function run() {
       }
     });
 
-
     //SSL commerze---------------------------
-    app.post('/order', (req, res) => {
-      const {firstName, lastName, address, currency, mobile, amount,products} = req.body;
+    app.post('/order', async(req, res) => {
+      const {user_email,firstName, lastName, address, currency, mobile, amount,products} = req.body;
+      
+
       const name = firstName + lastName;
       const trainId = new ObjectId().toString();
       
@@ -864,6 +866,27 @@ async function run() {
           }
          );
          if(result.modifiedCount > 0){
+          const query = { email: user_email };
+          const userCarts = await cartCollection.find(query).toArray();
+          // console.log(userCarts)
+          const queryies = {_id: { $in: userCarts.map(id => new ObjectId(id._id))}}
+          // console.log('queryies data ',queryies)
+          const deleteResult = await cartCollection.deleteMany(queryies)
+          // Step 2: Process each cart
+          
+          for (const cartItem of userCarts) {
+            const productId = cartItem.menuItemId; // Assuming menuItemId is the product ID
+      
+            const updatedProduct = await productCollection.findOneAndUpdate(
+              { _id: new ObjectId(productId) },
+              { $inc: { quantity: -cartItem.quantity } },
+              { returnDocument: 'after' }
+            );
+      
+            // Optionally, you can check the updatedProduct to see the updated document in the product collection
+            // console.log(`Updated product with ID ${productId}:`, updatedProduct.value);
+          }
+          
           res.redirect(`http://localhost:5173/profile`)
          }
       })
