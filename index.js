@@ -3,7 +3,7 @@ const cors = require("cors");
 const SSLCommerzPayment = require('sslcommerz-lts')
 const store_id = 'quiea65a8c0c26bf3f'
 const store_passwd = 'quiea65a8c0c26bf3f@ssl'
-const is_live = true
+const is_live = false;
 const app = express();
 const port = process.env.PORT || 3000;
 const jwt = require('jsonwebtoken');
@@ -502,27 +502,89 @@ async function run() {
 
     app.post('/carts', async (req, res) => {
       const item = req.body;
-      // console.log(item);
+      console.log('hitted carts post api - ',item);
       const productId = {_id: new ObjectId(item.menuItemId)}
-      const productData = await productCollection.find(productId).toArray()
-      // console.log('this is product data - ', productData[0])
-      if(!productData){
-        console.log('product data not found');
-        return res.status(404).json({ error: 'Product not found' });
-      }
-      // console.log('productdata quantity is - ',productData[0].quantity)
-      // console.log('item data quantity is ', item.quantity)
-      if(productData[0].quantity >= item.quantity){
-        // console.log('product found')
-        const result = await cartCollection.insertOne(item);
-        // console.log("this result added in cartcollection after the value",result)
+      
+      // Check if the product already exists in the cart
+      const existingCartItem = await cartCollection.findOne({ menuItemId: item.menuItemId,email: item.email });
+      console.log('exist card data - ',existingCartItem)
+
+      if(existingCartItem){
+         // If the product exists, update the quantity in the existing cart item
+        const newQuantity = existingCartItem.quantity + item.quantity;
+        console.log('new Quantity - ', newQuantity)
+        // Update the quantity in the cart collection
+        const result = await cartCollection.updateOne(
+          { menuItemId: item.menuItemId,email: item.email},
+          { $set: { quantity: newQuantity } }
+        );
+
+        console.log('set then result - ',result)
+
         res.send(result);
       }
       else{
-        return res.status(404).json({ error: 'this product quantity not available' });
+            const productData = await productCollection.find(productId).toArray()
+          console.log('this is product data - ', productData[0])
+          if(!productData){
+            console.log('product data not found');
+            return res.status(404).json({ error: 'Product not found' });
+          }
+          // console.log('productdata quantity is - ',productData[0].quantity)
+          // console.log('item data quantity is ', item.quantity)
+          if(productData[0].quantity >= item.quantity){
+            // console.log('product found')
+            const query = {}
+            const result = await cartCollection.insertOne(item);
+            console.log("this result added in cartcollection after the value",result)
+            res.send(result);
+          }
+          else{
+            return res.status(404).json({ error: 'this product quantity not available' });
+          }
       }
       
     })
+
+
+    app.put('/carts/:cartItemId', async (req, res) => {
+      console.log('carts put api hitted - ',req.body)
+      const { menuItemId} = req.body
+      const id = {_id: new ObjectId(menuItemId)}
+      const products = await productCollection.findOne(id);
+      console.log('single product data quantity from carts put api - ', products.quantity)
+      console.log('this is menuItemId - ', menuItemId)
+      const { cartItemId } = req.params;
+      const { quantity } = req.body;
+      console.log('this cartid from put api ',cartItemId)
+      console.log('this quantity from put api ', quantity)
+  
+      try {
+        if(products.quantity+1 > quantity){
+          // Update the cart quantity in the database
+          const updatedCart = await cartCollection.findOneAndUpdate(
+            { _id: new ObjectId(cartItemId) },
+            { $set: { quantity } },
+            { returnDocument: 'after' }
+          );
+
+          console.log('updated cart data - ',updatedCart)
+    
+          // if (!updatedCart.value) {
+          //   return res.status(404).json({ error: 'Cart item not found' });
+          // }
+    
+          res.send({data: 'successful',updatedCart: updatedCart});
+          }
+        else {
+          return res.status(404).json({ error: 'not available this quantity.' });
+        }
+      } catch (error) {
+        console.error('Error updating cart quantity:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+  
 
     app.delete('/carts/:id', async (req, res) => {
       const id = req.params.id;
@@ -810,8 +872,8 @@ async function run() {
         total_amount: amount,
         currency: currency,
         tran_id: trainId, // use unique tran_id for each api call
-        success_url: `http://localhost:3000/payment/success/${trainId}`,
-        fail_url: `http://localhost:3000/payment/fail/${trainId}`,
+        success_url: `https://quieasycarts.onrender.com/payment/success/${trainId}`,
+        fail_url: `https://quieasycarts.onrender.com/payment/fail/${trainId}`,
         cancel_url: 'http://localhost:3030/cancel',
         ipn_url: 'http://localhost:3030/ipn',
         shipping_method: 'Courier',
