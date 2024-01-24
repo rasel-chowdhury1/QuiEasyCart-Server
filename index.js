@@ -68,7 +68,9 @@ async function run() {
     const sizeCollection = client.db('QuiEasyCartDB').collection('sizes')
     const blogCollection = client.db('QuiEasyCartDB').collection('blogs')
     const helpCollection = client.db('QuiEasyCartDB').collection('helps')
-
+    const wishListCollection = client.db('QuiEasyCartDB').collection('wishlist')
+    const faqCollection = client.db('QuiEasyCartDB').collection('frequentlyQuesAnswers')
+    const orderCollection = client.db('QuiEasyCartDB').collection('orders')
     
     //jwt api
     // console.log('jwt key ',process.env.ACCESS_TOKEN_SECRET)
@@ -95,9 +97,8 @@ async function run() {
       next()
     }
 
-    const wishListCollection = client.db('QuiEasyCartDB').collection('wishlist')
-    const faqCollection = client.db('QuiEasyCartDB').collection('frequentlyQuesAnswers')
-    const orderCollection = client.db('QuiEasyCartDB').collection('orders')
+
+    
     //user api
     app.get('/allUsers', async(req,res) => {
       const result = await useProfileCollection.find().toArray()
@@ -988,6 +989,8 @@ app.delete('/deleteOrder/:id', async (req, res) => {
     res.status(500).send({ message: err.message });
   }
 });
+
+
 
 
 
