@@ -950,7 +950,7 @@ async function run() {
             // console.log(`Updated product with ID ${productId}:`, updatedProduct.value);
           }
           
-          res.redirect(`http://localhost:5173/profile`)
+          res.redirect(`https://quieasycart.web.app/profile`)
          }
       })
 
@@ -967,7 +967,7 @@ async function run() {
           }
          );
          if(result.acknowledged){
-          res.redirect(`http://localhost:5173/profile`)
+          res.redirect(`https://quieasycart.web.app/profile`)
          }
       })
   })
